@@ -103,4 +103,4 @@ Published under the MIT license.
 
 ## Copyright
 
-2018, Ronald Römer
+2018-2019, Ronald Römer
