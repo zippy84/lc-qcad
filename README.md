@@ -4,6 +4,10 @@ This QCAD plugin prepares drawings for laser cutting and is designed for drawing
 
 Primarily it should be used in model making.
 
+## Donation
+
+You can support my project with [PayPal](https://paypal.me/zippy84).
+
 ## Features
 
 - automatically removes very small lines
@@ -93,14 +97,10 @@ Furthermore there are this values:
 
 - sometimes it is not possible to add gaps on all selected sides - that's why you have to control the result and add them manually where there are missing
 
-## Donating
-
-If you like this project and you want to support it, you can donate with [PayPal](https://paypal.me/zippy84).
-
 ## License
 
 Published under the MIT license.
 
 ## Copyright
 
-2018-2019, Ronald Römer
+2018-2020, Ronald Römer

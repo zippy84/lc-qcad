@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, Ronald Römer
+/* Copyright (c) 2018-2020, Ronald Römer
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 */
@@ -375,10 +375,15 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
     di.applyOperation(op2);
 
     if (cfg['add-side-cuttings']) {
-
+        ///*
         var lay = AddLayer('SideCuttings', 'Yellow');
 
         var op3 = new RAddObjectsOperation(false);
+        //*/
+
+        /*
+        var op3 = new RModifyObjectsOperation(false);
+        */
 
         var blocks = doc.queryAllBlocks();
 
@@ -419,7 +424,13 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
                                 && !seg.getStartPoint().equalsFuzzy(ptA)
                                 && !seg.getEndPoint().equalsFuzzy(ptA)) {
 
+                                ///*
                                 var v = ptB.operator_subtract(ptA).normalize();
+                                //*/
+
+                                /*
+                                var v = ptB.operator_subtract(ptA).normalize().operator_multiply(.75);
+                                */
 
                                 if (isArcShape(seg)) {
                                     // getTangents() funktioniert hier nicht, weil die methode
@@ -430,21 +441,26 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
                                         w = ptA.operator_subtract(c).normalize(),
                                         orth = new RVector(-w.y, w.x);
 
+                                    ///*
                                     if (Math.abs(orth.dot(v)) > 1e-5) {
                                         break;
                                     }
+                                    //*/
 
                                 } else /*if (isLineShape(seg))*/ {
                                     var w = seg.getEndPoint().operator_subtract(seg.getStartPoint()).normalize();
 
+                                    ///*
                                     if (Math.abs(w.dot(v)) > 1e-5) {
                                         break;
                                     }
+                                    //*/
 
                                 }
 
                                 var ptC = ptA.operator_subtract(v);
 
+                                ///*
                                 var line = new RLine(ptA, ptC),
                                     lineEnt = shapeToEntity(doc, line);
 
@@ -452,6 +468,17 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
                                 lineEnt.setLayerId(lay.getId());
 
                                 op3.addObject(lineEnt, false);
+                                //*/
+
+                                /*
+                                if (k == 0) {
+                                    itm.setStartPoint(ptC);
+                                } else {
+                                    itm.setEndPoint(ptC);
+                                }
+
+                                op3.addObject(itm, false);
+                                */
 
                                 break;
 
