@@ -10,7 +10,7 @@
     "gap-min-dist": 25,
     "special-size-1": 0,
     "special-size-2": 196,
+    "extend-engraving": 0,
     "del-tmp-layers": true,
-    "add-markers": true,
-    "add-side-cuttings": false
+    "add-markers": true
 }

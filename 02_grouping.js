@@ -374,16 +374,8 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
 
     di.applyOperation(op2);
 
-    if (cfg['add-side-cuttings']) {
-        ///*
-        var lay = AddLayer('SideCuttings', 'Yellow');
-
-        var op3 = new RAddObjectsOperation(false);
-        //*/
-
-        /*
+    if (cfg['extend-engraving'] > 0) {
         var op3 = new RModifyObjectsOperation(false);
-        */
 
         var blocks = doc.queryAllBlocks();
 
@@ -421,56 +413,13 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
                             var seg = segs[l];
 
                             if (seg.isOnShape(ptA)
-                                && !seg.getStartPoint().equalsFuzzy(ptA)
-                                && !seg.getEndPoint().equalsFuzzy(ptA)) {
+                                && !seg.getStartPoint().equalsFuzzy(ptA, .1)
+                                && !seg.getEndPoint().equalsFuzzy(ptA, .1)) {
 
-                                ///*
-                                var v = ptB.operator_subtract(ptA).normalize();
-                                //*/
-
-                                /*
-                                var v = ptB.operator_subtract(ptA).normalize().operator_multiply(.75);
-                                */
-
-                                if (isArcShape(seg)) {
-                                    // getTangents() funktioniert hier nicht, weil die methode
-                                    // voraussetzt, dass pt nicht auf dem arc ist
-                                    // siehe https://github.com/qcad/qcad/blob/18a4766e4d124c9a3d951eaad6a505afe4f8ef0d/src/core/math/RCircle.cpp#L264
-
-                                    var c = seg.getCenter(),
-                                        w = ptA.operator_subtract(c).normalize(),
-                                        orth = new RVector(-w.y, w.x);
-
-                                    ///*
-                                    if (Math.abs(orth.dot(v)) > 1e-5) {
-                                        break;
-                                    }
-                                    //*/
-
-                                } else /*if (isLineShape(seg))*/ {
-                                    var w = seg.getEndPoint().operator_subtract(seg.getStartPoint()).normalize();
-
-                                    ///*
-                                    if (Math.abs(w.dot(v)) > 1e-5) {
-                                        break;
-                                    }
-                                    //*/
-
-                                }
+                                var v = ptB.operator_subtract(ptA).normalize().operator_multiply(cfg['extend-engraving']);
 
                                 var ptC = ptA.operator_subtract(v);
 
-                                ///*
-                                var line = new RLine(ptA, ptC),
-                                    lineEnt = shapeToEntity(doc, line);
-
-                                lineEnt.setBlockId(blocks[i]);
-                                lineEnt.setLayerId(lay.getId());
-
-                                op3.addObject(lineEnt, false);
-                                //*/
-
-                                /*
                                 if (k == 0) {
                                     itm.setStartPoint(ptC);
                                 } else {
@@ -478,7 +427,6 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
                                 }
 
                                 op3.addObject(itm, false);
-                                */
 
                                 break;
 

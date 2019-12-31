@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>365</width>
-    <height>385</height>
+    <height>466</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -252,7 +252,17 @@
        </property>
       </widget>
      </item>
-     <item row="11" column="0" colspan="2">
+     <item row="11" column="1">
+      <widget class="QDoubleSpinBox" name="ExtendEngraving">
+       <property name="maximum">
+        <double>5.000000000000000</double>
+       </property>
+       <property name="singleStep">
+        <double>0.500000000000000</double>
+       </property>
+      </widget>
+     </item>
+     <item row="12" column="0" colspan="2">
       <widget class="QCheckBox" name="DelTmpLayers">
        <property name="text">
         <string>del-tmp-layers</string>
@@ -262,7 +272,7 @@
        </property>
       </widget>
      </item>
-     <item row="12" column="0" colspan="2">
+     <item row="13" column="0" colspan="2">
       <widget class="QCheckBox" name="AddMarkers">
        <property name="text">
         <string>add-markers</string>
@@ -272,13 +282,10 @@
        </property>
       </widget>
      </item>
-     <item row="13" column="0" colspan="2">
-      <widget class="QCheckBox" name="AddSideCuttings">
+     <item row="11" column="0">
+      <widget class="QLabel" name="label_12">
        <property name="text">
-        <string>add-side-cuttings</string>
-       </property>
-       <property name="checked">
-        <bool>false</bool>
+        <string>extend-engraving</string>
        </property>
       </widget>
      </item>
@@ -311,9 +318,9 @@
   <tabstop>GapMinDist</tabstop>
   <tabstop>SpecialSize1</tabstop>
   <tabstop>SpecialSize2</tabstop>
+  <tabstop>ExtendEngraving</tabstop>
   <tabstop>DelTmpLayers</tabstop>
   <tabstop>AddMarkers</tabstop>
-  <tabstop>AddSideCuttings</tabstop>
  </tabstops>
  <resources/>
  <connections>

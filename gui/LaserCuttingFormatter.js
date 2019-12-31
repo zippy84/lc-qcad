@@ -86,9 +86,9 @@ LaserCuttingFormatter.prototype.beginEvent = function () {
         'gap-min-dist': this.widgets['GapMinDist'].value,
         'special-size-1': this.widgets['SpecialSize1'].value,
         'special-size-2': this.widgets['SpecialSize2'].value,
+        'extend-engraving': this.widgets['ExtendEngraving'].value,
         'del-tmp-layers': this.widgets['DelTmpLayers'].checked,
-        'add-markers': this.widgets['AddMarkers'].checked,
-        'add-side-cuttings': this.widgets['AddSideCuttings'].checked
+        'add-markers': this.widgets['AddMarkers'].checked
     };
 
     bundleFct(userCfg);
