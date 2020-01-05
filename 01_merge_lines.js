@@ -16,16 +16,16 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
 
     var entities = doc.queryAllEntities(false, true);
 
-    var filtered = [],
-        pts = [];
+    var lay = doc.queryLayer(cfg['engraving-layer-name']),
+        _layId = lay.getId();
+
+    var pts = [];
 
     for (var i = 0; i < entities.length; i++) {
         var obj = entities[i],
             ent = doc.queryEntity(obj);
 
-        if (ent.getLayerName() != cfg['engraving-layer-name']
-            && (isArcEntity(ent) || isLineEntity(ent))) {
-
+        if (isArcEntity(ent) || isLineEntity(ent)) {
             var sPt = ent.getStartPoint(),
                 ePt = ent.getEndPoint();
 
@@ -33,8 +33,6 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
 
             pts.push({ 'x': sPt.x, 'y': sPt.y, 'obj': obj, 'end': 0, 'endPt': ePt, 'layId': layId });
             pts.push({ 'x': ePt.x, 'y': ePt.y, 'obj': obj, 'end': 1, 'endPt': sPt, 'layId': layId });
-
-            filtered.push(obj);
 
         }
     }
@@ -45,30 +43,30 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
 
     var tree = new kdTree(pts, df, ['x', 'y']);
 
-    var dupl = [];
+    var dupl = {};
 
     for (var i = 0; i < pts.length; i++) {
-        if (dupl.indexOf(pts[i].obj) < 0) {
-            var nearest = tree.nearest(pts[i], 20);
+        var p = pts[i];
+        if (typeof dupl[p.obj] === 'undefined') {
+            var nearest = tree.nearest(p, 20);
 
             for (var j = 0; j < nearest.length; j++) {
-                if (nearest[j][1] < 1e-5
-                    && nearest[j][0].obj != pts[i].obj
-                    && dupl.indexOf(nearest[j][0].obj) < 0) {
+                var near = nearest[j];
 
-                    if (df(nearest[j][0].endPt, pts[i].endPt) < 1e-5) {
-                        var shA = doc.queryEntity(nearest[j][0].obj).castToShape(),
-                            shB = doc.queryEntity(pts[i].obj).castToShape();
+                if (near[1] < 1e-5
+                    && near[0].obj != p.obj
+                    && typeof dupl[near[0].obj] === 'undefined'
+                    && near[0].endPt.equalsFuzzy2D(p.endPt, 1e-5)) {
 
-                        if (isArcShape(shA) && isArcShape(shB)) {
-                            if (shA.equals(shB, 1e-5)) {
-                                dupl.push(nearest[j][0].obj);
-                            }
+                    var shA = doc.queryEntity(near[0].obj).castToShape(),
+                        shB = doc.queryEntity(p.obj).castToShape();
 
-                        } else {
-                            dupl.push(nearest[j][0].obj);
+                    if (isArcShape(shA) && isArcShape(shB)) {
+                        if (shA.equals(shB, 1e-5)) {
+                            dupl[near[0].obj] = null;
                         }
-
+                    } else {
+                        dupl[near[0].obj] = null;
                     }
                 }
             }
@@ -78,17 +76,17 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
 
     var op = new RDeleteObjectsOperation(false);
 
-    for (var i = 0; i < dupl.length; i++) {
-        op.deleteObject(doc.queryEntity(dupl[i]));
+    for (var d in dupl) {
+        op.deleteObject(doc.queryEntity(parseInt(d)));
     }
 
     di.applyOperation(op);
 
-    var pts2 = pts.filter(function (p) { return dupl.indexOf(p.obj) < 0; });
+    qDebug('1)', (Date.now()-before)/1e3, 's');
 
-    filtered = pts2.map(function (p) { return p.obj; });
+    var pts2 = pts.filter(function (p) { return typeof dupl[p.obj] === 'undefined' && p.layId != _layId; });
 
-    dupl.length = 0;
+    var filtered = pts2.map(function (p) { return p.obj; });
 
     tree = new kdTree(pts2, df, ['x', 'y']);
 
@@ -108,10 +106,10 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
         return ((a%b)+b)%b;
     }
 
-    var skip = [];
+    var skip = {};
 
     for (var i = 0; i < pts2.length; i++) {
-        if (skip.indexOf(i) < 0) {
+        if (typeof skip[i] === 'undefined') {
 
             var nearest = tree.nearest(pts2[i], 5);
 
@@ -193,11 +191,13 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
                 var op = new RModifyObjectOperation(obj, false);
                 di.applyOperation(op);
 
-                skip.push(objs[0][0].i);
+                skip[objs[0][0].i] = null;
 
             }
         }
     }
+
+    qDebug('2)', (Date.now()-before)/1e3, 's');
 
     function Search (shs, side, layId) {
         if (side == 'right') {
@@ -257,14 +257,14 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
         return false;
     }
 
-    var visited = [];
+    var visited = {};
 
     var op = new RAddObjectsOperation(false);
 
     for (var i = 0; i < filtered.length; i++) {
         var id = filtered[i];
 
-        if (visited.indexOf(id) < 0) {
+        if (typeof visited[id] === 'undefined') {
 
             var f = doc.queryEntity(id);
 
@@ -273,9 +273,9 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
             while (Search(shapes, 'right', f.getLayerId())) {}
             while (Search(shapes, 'left', f.getLayerId())) {}
 
-            var ids = shapes.map(function (s) { return s.id; });
-
-            Array.prototype.push.apply(visited, ids);
+            shapes.forEach(function (s) {
+                visited[s.id] = null;
+            });
 
             var newPl = new RPolyline(shapes.map(function (s) { return s.shape; }));
 
@@ -288,8 +288,8 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
         }
     }
 
-    for (var i = 0; i < visited.length; i++) {
-        op.deleteObject(doc.queryEntity(visited[i]));
+    for (var v in visited) {
+        op.deleteObject(doc.queryEntity(parseInt(v)));
     }
 
     di.applyOperation(op);

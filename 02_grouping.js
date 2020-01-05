@@ -385,7 +385,7 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
             }
 
             var itms = doc.queryBlockEntities(blocks[i]);
-            
+
             var segs = [];
 
             for (var j = 0; j < itms.length; j++) {
