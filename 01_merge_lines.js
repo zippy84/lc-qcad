@@ -82,8 +82,6 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
 
     di.applyOperation(op);
 
-    qDebug('1)', (Date.now()-before)/1e3, 's');
-
     var pts2 = pts.filter(function (p) { return typeof dupl[p.obj] === 'undefined' && p.layId != _layId; });
 
     var filtered = pts2.map(function (p) { return p.obj; });
@@ -106,49 +104,55 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
         return ((a%b)+b)%b;
     }
 
-    var skip = {};
+    var skip = {},
+        shapes = {};
 
     for (var i = 0; i < pts2.length; i++) {
         if (typeof skip[i] === 'undefined') {
 
             var nearest = tree.nearest(pts2[i], 5);
 
-            var objs = nearest.filter(function (p) {
+            var found = nearest.filter(function (p) {
                 return p[0].obj != pts2[i].obj
                     && p[1] < 1e-5
                     && pts2[i].layId == p[0].layId;
             });
 
-            if (objs.length > 1) {
+            if (found.length > 1) {
                 throw new Error('Ambiguous connection found at coordinate [' + pts2[i].x + ', ' + pts2[i].y + '].');
 
-            } else if (objs.length == 1) {
+            } else if (found.length == 1) {
+                var _obj = found[0][0],
+                    ent = doc.queryEntity(_obj.obj),
+                    sh = ent.castToShape();
 
-                var obj = doc.queryEntity(objs[0][0].obj),
-                    sh = obj.castToShape();
+                if (typeof shapes[_obj.obj] === 'undefined') {
+                    shapes[_obj.obj] = sh.clone();
+                }
 
-                if (isLineEntity(obj)) {
-                    if (objs[0][0].end == 0) {
-                        obj.setStartPoint(new RVector(pts2[i].x, pts2[i].y));
+                var _sh = shapes[_obj.obj];
+
+                if (isLineShape(_sh)) {
+                    if (_obj.end == 0) {
+                        _sh.setStartPoint(new RVector(pts2[i].x, pts2[i].y));
                     } else {
-                        obj.setEndPoint(new RVector(pts2[i].x, pts2[i].y));
+                        _sh.setEndPoint(new RVector(pts2[i].x, pts2[i].y));
                     }
 
                 } else {
                     // Arc
+                    var phi = Mod(_sh.getEndAngle()-_sh.getStartAngle(), 2*Math.PI);
 
-                    var phi = Mod(obj.getEndAngle()-obj.getStartAngle(), 2*Math.PI);
-
-                    if (obj.isReversed()) {
+                    if (_sh.isReversed()) {
                         phi = 2*Math.PI-phi;
                     }
 
                     phi /= 2;
 
-                    if (objs[0][0].end == 1) {
-                        var pt = obj.getStartPoint();
+                    if (_obj.end == 1) {
+                        var pt = _sh.getStartPoint();
                     } else {
-                        var pt = obj.getEndPoint();
+                        var pt = _sh.getEndPoint();
                     }
 
                     var v = new RVector(pt.x-pts2[i].x, pt.y-pts2[i].y),
@@ -158,7 +162,7 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
 
                     var d = l/Math.tan(phi);
 
-                    var f = (objs[0][0].end == 0 ^ obj.isReversed()) ? 1 : -1;
+                    var f = (_obj.end == 0 ^ _sh.isReversed()) ? 1 : -1;
 
                     var c = new RVector(pts2[i].x+l*v.x-f*d*v.y, pts2[i].y+l*v.y+f*d*v.x);
 
@@ -175,29 +179,35 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
                     var angA = GetAng(x, vA),
                         angB = GetAng(x, vB);
 
-                    sh.setCenter(c);
-                    sh.setRadius(r);
+                    _sh.setCenter(c);
+                    _sh.setRadius(r);
 
-                    if (objs[0][0].end == 0) {
-                        sh.setStartAngle(angA);
-                        sh.setEndAngle(angB);
+                    if (_obj.end == 0) {
+                        _sh.setStartAngle(angA);
+                        _sh.setEndAngle(angB);
                     } else {
-                        sh.setEndAngle(angA);
-                        sh.setStartAngle(angB);
+                        _sh.setEndAngle(angA);
+                        _sh.setStartAngle(angB);
                     }
 
                 }
 
-                var op = new RModifyObjectOperation(obj, false);
-                di.applyOperation(op);
-
-                skip[objs[0][0].i] = null;
+                skip[_obj.i] = null;
 
             }
         }
     }
 
-    qDebug('2)', (Date.now()-before)/1e3, 's');
+    var op = new RModifyObjectsOperation(false);
+
+    for (var s in shapes) {
+        var ent = doc.queryEntity(parseInt(s));
+        ent.setShape(shapes[s]);
+
+        op.addObject(ent, false);
+    }
+
+    di.applyOperation(op);
 
     function Search (shs, side, layId) {
         if (side == 'right') {
