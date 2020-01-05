@@ -17,7 +17,11 @@ var cfg = JSON.parse(readTextFile('/home/zippy/lc-qcad/cfg.json'));
     var entities = doc.queryAllEntities(false, true);
 
     var lay = doc.queryLayer(cfg['engraving-layer-name']),
+        _layId;
+
+    if (!isNull(lay)) {
         _layId = lay.getId();
+    }
 
     var pts = [];
 
