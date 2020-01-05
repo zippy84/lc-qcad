@@ -7,10 +7,9 @@ cwd=${path%/*}
 tmp=$(mktemp -d)
 base=$tmp/LaserCuttingFormatter
 
-#mkdir $base
-#gawk -f _deploy.awk 0*.js > $base/lcBundle.js
+mkdir $base
 
-gawk -f _deploy.awk 0*.js | ~/go/bin/minify --type js -o $base/lcBundle.js
+gawk -f _deploy.awk 0*.js | npx uglifyjs -c -m -o $base/lcBundle.js
 cp $cwd/gui/* $base
 
 cd $tmp
