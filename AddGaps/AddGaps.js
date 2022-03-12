@@ -415,13 +415,3 @@ AddGaps.prototype.mousePressEvent = function (event) {
     }
 
 }
-
-AddGaps.init = function (basePath) {
-    var action = new RGuiAction('AddGaps', RMainWindowQt.getMainWindow());
-    action.setRequiresDocument(true);
-    action.setScriptFile(basePath + '/AddGaps.js');
-    action.setGroupSortOrder(100000);
-    action.setSortOrder(0);
-    action.setWidgetNames(['MiscModifyMenu']);
-    action.setDefaultShortcut(new QKeySequence('a,g'));
-}

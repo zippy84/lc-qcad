@@ -57,13 +57,3 @@ Prepare.prototype.beginEvent = function () {
     EAction.activateMainWindow();
     this.terminate();
 }
-
-Prepare.init = function (basePath) {
-    var action = new RGuiAction('Prepare', RMainWindowQt.getMainWindow());
-    action.setRequiresDocument(true);
-    action.setScriptFile(basePath + '/Prepare.js');
-    action.setGroupSortOrder(100000); // ?
-    action.setSortOrder(0); // ?
-    action.setWidgetNames(['MiscModifyMenu']);
-    action.setDefaultShortcut(new QKeySequence('p,d'));
-}
