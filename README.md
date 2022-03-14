@@ -54,15 +54,17 @@ Adjustable settings are:
     - all engravings must be on the area between inner and outer contours
     - small overlapping is allowed, as long as the center of each element is on the area between the contours
 - Offset
-    - the width of the cutting
-    - all cuttings will be adjusted by the half of the offset
+    - all cuttings will be adjusted by that offset (the areas of inner contours becomes smaller, outer contours bigger)
+    - practically it is the half of the cutting width
     - be very careful with this setting
 
 ## AddGaps Plugin
 
 The second plugin can be used to add gaps to the cuttings. Call this plugin via `Misc > Modify > AddGaps`.
 
-You have to select the cutting layer first. Hover to one of the lines and you will see a preview of the new segment with gaps. If the preview is okay, just click to fix it. You can also unfix the previews with a second click. Add gaps to other segments and finally terminate the plugin with a right click in the document. This will modifies the polylines in the layer.
+You have to select the cutting layer first. Hover to one of the lines and you will see a preview of the new segment with gaps. If the preview is okay, just click to lock it. You can unlock the previews with a second click. Add gaps to other segments and finally terminate the plugin with a right click in the document. This will modifies the polylines in the layer.
+
+Draft Mode (DF) must be deactivated!
 
 The plugin has two settings:
 
@@ -71,6 +73,8 @@ The plugin has two settings:
     - distance between two or more gaps
     - it's just a guiding value
     - if an edge length is smaller than `1.75*distance` then only one gap will be added in the middle
+
+![Usage](/doc/AddGaps.gif)
 
 ## License
 
