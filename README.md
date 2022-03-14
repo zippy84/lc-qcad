@@ -52,7 +52,7 @@ Adjustable settings are:
 - Layer Engraving
     - existing layer with engravings
     - all engravings must be on the area between inner and outer contours
-    - small overlapping is allowed, as long as the center of each element is on the area between the contours
+    - small overlapping is allowed, as long as all points are on the area between the contours
 - Offset
     - all cuttings will be adjusted by that offset (the areas of inner contours becomes smaller, outer contours bigger)
     - practically it is the half of the cutting width
