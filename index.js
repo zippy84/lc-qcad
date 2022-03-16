@@ -640,8 +640,10 @@ for (const [parent, childs] of Object.entries(data)) {
 
     const position = parentEnt.getBoundingBox().getCorner1();
 
-    const op = new RAddObjectsOperation(false),
+    const op = new RAddObjectsOperation(),
         block = new RBlock(doc, `Block${i++}`, new RVector(0, 0));
+
+    op.setTransactionGroup(GROUP);
 
     op.addObject(block, false);
 
@@ -649,7 +651,8 @@ for (const [parent, childs] of Object.entries(data)) {
 
     const blockId = block.getId();
 
-    const op2 = new RModifyObjectsOperation(false);
+    const op2 = new RModifyObjectsOperation();
+    op2.setTransactionGroup(GROUP);
 
     childs.unshift(parentId);
 
@@ -664,7 +667,8 @@ for (const [parent, childs] of Object.entries(data)) {
 
     di.applyOperation(op2);
 
-    const op3 = new RAddObjectsOperation(false);
+    const op3 = new RAddObjectsOperation();
+    op3.setTransactionGroup(GROUP);
 
     const ref = new RBlockReferenceEntity(doc, new RBlockReferenceData(blockId, position, new RVector(1, 1), 0));
 
