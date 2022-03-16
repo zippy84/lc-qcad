@@ -584,7 +584,7 @@ const rects = [];
 doc.queryAllEntities(false, false, RS.EntityPolyline).forEach(id => {
     const ent = doc.queryEntity(id);
 
-    if (ent.getLayerName() !== engravingLayerName) {
+    if (ent.isClosed() && ent.getLayerName() !== engravingLayerName) {
         rects.push(ent);
     }
 });
@@ -789,12 +789,26 @@ di.applyOperation(op10);
 //     qDebug(ent.getId());
 // });
 
+// verschiebt auf die 0
+
+const op11 = new RModifyObjectsOperation();
+op11.setTransactionGroup(GROUP);
+
+doc.queryLayerEntities(newLay.getId()).forEach(id => {
+    const ent = doc.queryEntityDirect(id);
+
+    ent.setLayerId(doc.getLayer0Id());
+    op11.addObject(ent, false);
+});
+
+di.applyOperation(op11);
+
 // löst die blöcke auf
 
 const refs3 = doc.queryAllBlockReferences();
 
-const op11 = new RModifyObjectsOperation();
-op11.setTransactionGroup(GROUP);
+const op12 = new RModifyObjectsOperation();
+op12.setTransactionGroup(GROUP);
 
 for (const _ref of refs3) {
     const ref = doc.queryEntity(_ref),
@@ -810,41 +824,41 @@ for (const _ref of refs3) {
         itm.rotate(rot);
         itm.move(pos);
 
-        op11.addObject(itm, false);
+        op12.addObject(itm, false);
     }
 
     // löscht den block
-    op11.deleteObject(doc.queryBlock(ref.getReferencedBlockId()));
+    op12.deleteObject(doc.queryBlock(ref.getReferencedBlockId()));
 
 }
 
-di.applyOperation(op11);
+di.applyOperation(op12);
 
 // verschiebt auf die 0
 
-const op12 = new RModifyObjectsOperation();
-op12.setTransactionGroup(GROUP);
+const op13 = new RModifyObjectsOperation();
+op13.setTransactionGroup(GROUP);
 
 doc.queryLayerEntities(offLay.getId()).forEach(id => {
     const ent = doc.queryEntityDirect(id);
 
     ent.setLayerId(doc.getLayer0Id());
-    op12.addObject(ent, false);
+    op13.addObject(ent, false);
 });
 
-di.applyOperation(op12);
+di.applyOperation(op13);
 
 // löscht layer
 
 const _newLay = doc.queryLayer('New'),
     _offLay = doc.queryLayer('Offset');
 
-const op13 = new RDeleteObjectsOperation();
-op13.setTransactionGroup(GROUP);
+const op14 = new RDeleteObjectsOperation();
+op14.setTransactionGroup(GROUP);
 
-op13.deleteObject(_newLay);
-op13.deleteObject(_offLay);
-di.applyOperation(op13);
+op14.deleteObject(_newLay);
+op14.deleteObject(_offLay);
+di.applyOperation(op14);
 
 if (_window === null) {
     di.exportFile(filePath.replace(/([^\/]+)\.dxf$/, 'edited_$1.dxf'), 'DXF 2013');

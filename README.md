@@ -38,6 +38,7 @@ There are a few things that you should consider before using the plugins.
 - contours (inner and outer) and engravings must be clearly separated from each other
 - contours have to be closed
 - all layers must be visible and unlocked
+- avoid nesting parts
 
 ## Prepare Plugin
 
