@@ -49,7 +49,9 @@ Prepare.prototype.beginEvent = function () {
     try {
         var fct = new Function('argEngravingLayerName', 'argOffset', contents);
         fct(engravingLayerName, offset);
-    } catch (e) {}
+    } catch (e) {
+        EAction.handleUserWarning(e.message);
+    }
 
     WidgetFactory.saveState(dialog);
 

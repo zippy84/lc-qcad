@@ -17,10 +17,10 @@ import 'core-js/features/object/assign';
 
 import KDBush from 'kdbush';
 
-try {
+const group = 10,
+    _window = RMainWindowQt.getMainWindow();
 
-const _window = RMainWindowQt.getMainWindow(),
-    GROUP = 10;
+try {
 
 let di, doc, filePath;
 
@@ -51,7 +51,7 @@ function addLayer(name, color) {
     const lay = new RLayer(doc, name, false, false, new RColor(color), doc.getLinetypeId('CONTINUOUS'), RLineweight.Weight000, false);
 
     const op = new RAddObjectOperation(lay, false);
-    op.setTransactionGroup(GROUP);
+    op.setTransactionGroup(group);
 
     di.applyOperation(op);
 
@@ -91,7 +91,7 @@ if (isNull(engLay)) {
     engLay.setLinetypeId(doc.getLinetypeId('CONTINUOUS'));
 
     const op = new RModifyObjectOperation(engLay);
-    op.setTransactionGroup(GROUP);
+    op.setTransactionGroup(group);
 
     di.applyOperation(op);
 }
@@ -105,7 +105,7 @@ if (isNull(offLay)) {
 const op = new RDeleteObjectsOperation(),
     all = doc.queryAllEntities(false, true);
 
-op.setTransactionGroup(GROUP);
+op.setTransactionGroup(group);
 
 for (const _ent of all) {
     const ent = doc.queryEntity(_ent);
@@ -119,7 +119,7 @@ di.applyOperation(op);
 const refs = doc.queryAllBlockReferences();
 
 const op1 = new RAddObjectsOperation();
-op1.setTransactionGroup(GROUP);
+op1.setTransactionGroup(group);
 
 const blocks = {},
     usedIds = [];
@@ -145,7 +145,7 @@ for (const _ref of refs) {
 di.applyOperation(op1);
 
 const op2 = new RModifyObjectsOperation();
-op2.setTransactionGroup(GROUP);
+op2.setTransactionGroup(group);
 
 // verschiebt die block-referenzen auf die 0 und kopiert mehrfach verwendete blöcke, sodass jede referenz auf eine kopie des blocks verweist
 
@@ -208,7 +208,7 @@ di.applyOperation(op2);
 // vereinheitlicht die attribute
 
 const op3 = new RModifyObjectsOperation();
-op3.setTransactionGroup(GROUP);
+op3.setTransactionGroup(group);
 
 const all2 = doc.queryAllEntities(false, false, [RS.EntityArc, RS.EntityLine, RS.EntityCircle, RS.EntityPolyline, RS.EntityEllipse]);
 
@@ -223,7 +223,7 @@ di.applyOperation(op3);
 // wandelt die circles in arcs um und löst die polylines auf
 
 const op4 = new RAddObjectsOperation();
-op4.setTransactionGroup(GROUP);
+op4.setTransactionGroup(group);
 
 const other = doc.queryAllEntities(false, true, [RS.EntityCircle, RS.EntityPolyline, RS.EntityEllipse]);
 
@@ -285,7 +285,7 @@ di.applyOperation(op4);
 // löscht leere oder nicht verwendete blöcke
 
 const op5 = new RDeleteObjectsOperation();
-op5.setTransactionGroup(GROUP);
+op5.setTransactionGroup(group);
 
 const usedIds2 = [];
 
@@ -308,7 +308,7 @@ di.applyOperation(op5);
 // löscht leere layer
 
 const op6 = new RDeleteObjectsOperation();
-op6.setTransactionGroup(GROUP);
+op6.setTransactionGroup(group);
 
 const lays = doc.queryAllLayers();
 
@@ -375,7 +375,7 @@ for (const p of pts) {
 }
 
 const op7 = new RDeleteObjectsOperation();
-op7.setTransactionGroup(GROUP);
+op7.setTransactionGroup(group);
 
 for (const dupl of Object.keys(dupls)) {
     op7.deleteObject(doc.queryEntity(parseInt(dupl)));
@@ -471,7 +471,7 @@ for (const p of pts2) {
 }
 
 const op8 = new RModifyObjectsOperation();
-op8.setTransactionGroup(GROUP);
+op8.setTransactionGroup(group);
 
 for (const id of Object.keys(shapes)) {
     const ent = doc.queryEntity(parseInt(id));
@@ -545,7 +545,7 @@ const entities2 = pts2.map(p => p.entId);
 const visited = {};
 
 const op9 = new RAddObjectsOperation();
-op9.setTransactionGroup(GROUP);
+op9.setTransactionGroup(group);
 
 for (const entId of entities2) {
     if (typeof visited[entId] === 'undefined') {
@@ -619,7 +619,14 @@ rects.forEach(rect => {
 
 });
 
-const allIds = Object.keys(data).map(id => parseInt(id)).concat(Object.values(data).flat());
+const parentIds = Object.keys(data).map(id => parseInt(id)),
+    childIds = Object.values(data).flat();
+
+if (parentIds.some(id => childIds.includes(id))) {
+    throw new Error('Nesting detected.');
+}
+
+const allIds = parentIds.concat(childIds);
 
 rects.forEach(rect => {
     const rectId = rect.getId();
@@ -643,7 +650,7 @@ for (const [parent, childs] of Object.entries(data)) {
     const op = new RAddObjectsOperation(),
         block = new RBlock(doc, `Block${i++}`, new RVector(0, 0));
 
-    op.setTransactionGroup(GROUP);
+    op.setTransactionGroup(group);
 
     op.addObject(block, false);
 
@@ -652,7 +659,7 @@ for (const [parent, childs] of Object.entries(data)) {
     const blockId = block.getId();
 
     const op2 = new RModifyObjectsOperation();
-    op2.setTransactionGroup(GROUP);
+    op2.setTransactionGroup(group);
 
     childs.unshift(parentId);
 
@@ -668,7 +675,7 @@ for (const [parent, childs] of Object.entries(data)) {
     di.applyOperation(op2);
 
     const op3 = new RAddObjectsOperation();
-    op3.setTransactionGroup(GROUP);
+    op3.setTransactionGroup(group);
 
     const ref = new RBlockReferenceEntity(doc, new RBlockReferenceData(blockId, position, new RVector(1, 1), 0));
 
@@ -684,7 +691,7 @@ const outerEnts = [];
 const refs2 = doc.queryAllBlockReferences();
 
 const op10 = new RAddObjectsOperation();
-op10.setTransactionGroup(GROUP);
+op10.setTransactionGroup(group);
 
 for (const refId of refs2) {
     const ref = doc.queryEntity(refId);
@@ -698,7 +705,7 @@ for (const refId of refs2) {
     const filtered = [];
 
     const _op = new RModifyObjectsOperation();
-    _op.setTransactionGroup(GROUP);
+    _op.setTransactionGroup(group);
 
     for (const itmA of itms) {
         let isInner = false;
@@ -796,7 +803,7 @@ di.applyOperation(op10);
 // verschiebt auf die 0
 
 const op11 = new RModifyObjectsOperation();
-op11.setTransactionGroup(GROUP);
+op11.setTransactionGroup(group);
 
 doc.queryLayerEntities(newLay.getId()).forEach(id => {
     const ent = doc.queryEntityDirect(id);
@@ -812,7 +819,7 @@ di.applyOperation(op11);
 const refs3 = doc.queryAllBlockReferences();
 
 const op12 = new RModifyObjectsOperation();
-op12.setTransactionGroup(GROUP);
+op12.setTransactionGroup(group);
 
 for (const _ref of refs3) {
     const ref = doc.queryEntity(_ref),
@@ -841,7 +848,7 @@ di.applyOperation(op12);
 // verschiebt auf die 0
 
 const op13 = new RModifyObjectsOperation();
-op13.setTransactionGroup(GROUP);
+op13.setTransactionGroup(group);
 
 doc.queryLayerEntities(offLay.getId()).forEach(id => {
     const ent = doc.queryEntityDirect(id);
@@ -858,7 +865,7 @@ const _newLay = doc.queryLayer('New'),
     _offLay = doc.queryLayer('Offset');
 
 const op14 = new RDeleteObjectsOperation();
-op14.setTransactionGroup(GROUP);
+op14.setTransactionGroup(group);
 
 op14.deleteObject(_newLay);
 op14.deleteObject(_offLay);
@@ -869,9 +876,13 @@ if (_window === null) {
     di.destroy();
 }
 
-} catch(err) {
+} catch (err) {
     const {lineNumber} = err;
 
     qDebug(err);
     qDebug('line', lineNumber);
+
+    if (_window !== null) {
+        throw err;
+    }
 }
