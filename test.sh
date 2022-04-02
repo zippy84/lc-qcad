@@ -8,6 +8,7 @@ while read dxf; do
     qcad -allow-multiple-instances -autostart dist/index.js $dxf
 done <<-EOF
     # /home/zippy/transfer/Laserfirstcut/Worbis/0_65.dxf
+    # /home/zippy/transfer/Laserfirstcut/Worbis/0_65_2.dxf
     # /home/zippy/transfer/Laserfirstcut/Worbis/1.dxf
     # /home/zippy/transfer/Laserfirstcut/Worbis/1_5.dxf
     # /home/zippy/transfer/Laserfirstcut/Worbis/2.dxf

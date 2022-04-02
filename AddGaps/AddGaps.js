@@ -26,8 +26,7 @@ AddGaps.prototype.beginEvent = function () {
 
     var toolBar = EAction.getOptionsToolBar();
     var gapWidget = toolBar.findChild('gap'),
-        distanceWidget = toolBar.findChild('distance'),
-        applyWidget = toolBar.findChild('apply');
+        distanceWidget = toolBar.findChild('distance');
 
     this.gap = gapWidget.getValue();
     this.distance = distanceWidget.getValue();
