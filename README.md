@@ -63,17 +63,19 @@ Adjustable settings are:
 
 The second plugin can be used to add gaps to the cuttings. Call this plugin via `Misc > Modify > AddGaps`.
 
-You have to select the cutting layer first. Hover to one of the lines and you will see a preview of the new segment with gaps. If the preview is okay, just click to lock it. You can unlock the previews with a second click. Add gaps to other segments and finally terminate the plugin with a right click in the document. This will modifies the polylines in the layer.
+You have to select the cutting layer first. Hover to one of the lines and you will see a preview of the new gap positions. If the preview is okay, just click to lock it. You can unlock a preview with a second click. Add gaps to other segments and finally terminate the plugin with a right click in the document.
 
-Draft Mode (DF) must be deactivated!
+Currently the plugin can only work on polylines.
 
 The plugin has two settings:
 
 - Width
+    - it's the width of the gap
+    - if the edge length is less than `1.5*width`, the whole segment will be deleted (it works only for line segments)
 - Distance
     - distance between two or more gaps
+    - if an edge length is smaller than `1.75*distance`, then only one gap will be added in the middle
     - it's just a guiding value
-    - if an edge length is smaller than `1.75*distance` then only one gap will be added in the middle
 
 ![Usage](/doc/AddGaps.gif)
 
@@ -83,4 +85,4 @@ Published under the MIT license.
 
 ## Copyright
 
-2018-2022, Ronald Römer
+2018-2023, Ronald Römer
