@@ -54,7 +54,7 @@ AddGaps.prototype.finishEvent = function () {
                 groups[entId] = [];
             }
 
-            groups[entId][segInd] = f.entities;
+            groups[entId][segInd] = f.shapes;
         }
 
     });
@@ -66,50 +66,52 @@ AddGaps.prototype.finishEvent = function () {
     Object.keys(groups).forEach(function (entId) {
         var ent = this.doc.queryEntity(parseInt(entId));
 
-        // ent.isUndone()
-
         var sh = ent.castToShape();
 
-        var modified = groups[entId];
+        var grp = groups[entId];
 
-        var newSegs = [[]];
+        var numSegs = sh.countSegments();
 
-        for (var i = 0; i < sh.countSegments(); i++) {
-            var last = newSegs[newSegs.length-1];
+        var newLines = [[]];
 
-            if (modified[i] !== undefined) {
-                var segs = modified[i].map(function (id) {
-                    var segEnt = this.doc.queryEntity(id);
-                    return segEnt.castToShape().clone();
-                }, this);
+        for (var i = 0; i < numSegs; i++) {
+            var lastLine = newLines[newLines.length-1];
 
-                last.push(segs[0]);
+            if (grp[i] !== undefined) {
+                if (grp[i].length) {
+                    lastLine.push(grp[i][0]);
 
-                for (var j = 1; j < segs.length; j++) {
-                    newSegs.push([segs[j]]);
+                    for (var j = 1; j < grp[i].length; j++) {
+                        newLines.push([grp[i][j]]);
+                    }
+
+                } else {
+                    newLines.push([]);
                 }
 
             } else {
-                last.push(sh.getSegmentAt(i).clone());
+                lastLine.push(sh.getSegmentAt(i).clone());
             }
         }
 
         if (sh.isClosed()) {
-            var last = newSegs[newSegs.length-1];
+            var lastLine = newLines[newLines.length-1];
 
-            var pA = newSegs[0][0].getStartPoint(),
-                pB = last[last.length-1].getEndPoint();
+            if (newLines[0].length && lastLine.length) {
+                var pA = newLines[0][0].getStartPoint(),
+                    pB = lastLine[lastLine.length-1].getEndPoint();
 
-            if (pA.equalsFuzzy2D(pB)) {
-                last.push.apply(last, newSegs[0]);
+                if (pA.equalsFuzzy2D(pB)) {
+                    lastLine.push.apply(lastLine, newLines[0]);
 
-                newSegs[0].length = 0;
+                    newLines[0].length = 0;
+                }
             }
         }
 
-        newSegs.forEach(function (segs) {
-            if (segs.length) {
-                var newSh = new RPolyline(segs);
+        newLines.forEach(function (line) {
+            if (line.length) {
+                var newSh = new RPolyline(line);
                 var pl = shapeToEntity(this.doc, newSh);
 
                 pl.copyAttributesFrom(ent.data());
@@ -244,7 +246,39 @@ AddGaps.prototype.mouseMoveEvent = function (event) {
 
             qDebug(l);
 
-            if (l > this.gap) {
+            var r = l-this.gap;
+
+            if (r < this.gap/2) {
+                if (isLineShape(seg)) {
+                    var shape = seg.clone();
+
+                    shape.getMiddlePoint()
+
+                    var pA = shape.getStartPoint(),
+                        pB = shape.getEndPoint();
+
+                    var vec = pB.operator_subtract(pA).normalize();
+
+                    var _a = shape.getMiddlePoint(),
+                        _b = _a.operator_add(new RVector(this.gap/2*vec.y, -this.gap/2*vec.x));
+
+                    var line = new RLine(_a, _b);
+
+                    var lineEnt = shapeToEntity(this.doc, line);
+
+                    lineEnt.copyAttributesFrom(ent.data());
+                    lineEnt.setLayerId(layId);
+
+                    lineEnt.setColor(new RColor('lime'));
+
+                    var op = new RAddObjectOperation(lineEnt, false, false);
+
+                    this.di.applyOperation(op);
+
+                    this.hovered = {key: key, entities: [lineEnt.getId()], shapes: []};
+                }
+
+            } else {
                 var d = l/this.distance;
 
                 var n = d < 1.75 ? 2 : Math.round(d);
@@ -267,6 +301,8 @@ AddGaps.prototype.mouseMoveEvent = function (event) {
 
                     var vec = pB.operator_subtract(pA).normalize();
 
+                    var mids = [];
+
                     var pts = [pA];
 
                     for (var i = 0; i < n; i++) {
@@ -274,6 +310,8 @@ AddGaps.prototype.mouseMoveEvent = function (event) {
 
                         pts.push(vec2.operator_add(vec.operator_multiply(-this.gap/2)));
                         pts.push(vec2.operator_add(vec.operator_multiply(this.gap/2)));
+
+                        mids.push(vec2);
                     }
 
                     pts.push(pB);
@@ -289,7 +327,11 @@ AddGaps.prototype.mouseMoveEvent = function (event) {
 
                     var op = new RAddObjectsOperation(false);
 
-                    lines.forEach(function (line) {
+                    mids.forEach(function (_a) {
+                        var _b = _a.operator_add(new RVector(this.gap/2*vec.y, -this.gap/2*vec.x));
+
+                        var line = new RLine(_a, _b);
+
                         var lineEnt = shapeToEntity(this.doc, line);
 
                         entities.push(lineEnt);
@@ -297,7 +339,7 @@ AddGaps.prototype.mouseMoveEvent = function (event) {
                         lineEnt.copyAttributesFrom(ent.data());
                         lineEnt.setLayerId(layId);
 
-                        lineEnt.setLineweight(RLineweight.Weight050);
+                        lineEnt.setColor(new RColor('lime'));
 
                         op.addObject(lineEnt, false);
                     }, this);
@@ -305,7 +347,8 @@ AddGaps.prototype.mouseMoveEvent = function (event) {
                     this.di.applyOperation(op);
 
                     this.hovered = {key: key,
-                        entities: entities.map(function (ent) { return ent.getId(); })};
+                        entities: entities.map(function (ent) { return ent.getId(); }),
+                        shapes: lines};
 
                 } else if (isArcShape(seg)) {
                     var shape = seg.clone();
@@ -329,11 +372,17 @@ AddGaps.prototype.mouseMoveEvent = function (event) {
                     var s_ = s/radius,
                         t_ = t/radius;
 
+                    var mids = [];
+
                     var angs = [start];
 
                     for (var i = 0; i < n; i++) {
-                        angs.push(start+s_+i*t_-gap_/2);
-                        angs.push(start+s_+i*t_+gap_/2);
+                        var phi = start+s_+i*t_;
+
+                        angs.push(phi-gap_/2);
+                        angs.push(phi+gap_/2);
+
+                        mids.push(shape.getPointAtAngle(phi));
                     }
 
                     angs.push(end);
@@ -359,23 +408,32 @@ AddGaps.prototype.mouseMoveEvent = function (event) {
 
                     var op = new RAddObjectsOperation(false);
 
-                    arcs.forEach(function (arc) {
-                        var arcEnt = shapeToEntity(this.doc, arc);
+                    mids.forEach(function (_a) {
+                        var vec = _a.operator_subtract(center).normalize();
 
-                        entities.push(arcEnt);
+                        var sign = reversed ? -1 : 1;
 
-                        arcEnt.copyAttributesFrom(ent.data());
-                        arcEnt.setLayerId(layId);
+                        var _b = _a.operator_add(vec.operator_multiply(sign*this.gap/2))
 
-                        arcEnt.setLineweight(RLineweight.Weight050);
+                        var line = new RLine(_a, _b);
 
-                        op.addObject(arcEnt, false);
+                        var lineEnt = shapeToEntity(this.doc, line);
+
+                        entities.push(lineEnt);
+
+                        lineEnt.copyAttributesFrom(ent.data());
+                        lineEnt.setLayerId(layId);
+
+                        lineEnt.setColor(new RColor('lime'));
+
+                        op.addObject(lineEnt, false);
                     }, this);
 
                     this.di.applyOperation(op);
 
                     this.hovered = {key: key,
-                        entities: entities.map(function (ent) { return ent.getId(); })};
+                        entities: entities.map(function (ent) { return ent.getId(); }),
+                        shapes: arcs};
 
                 }
             }

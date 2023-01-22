@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rollup --config
+npm run build
 zip -r dist/AddGaps.zip AddGaps/
 
 # dir=$(realpath $0)

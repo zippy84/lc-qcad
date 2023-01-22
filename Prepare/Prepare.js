@@ -31,7 +31,8 @@ Prepare.prototype.beginEvent = function () {
     var widgets = getWidgets(dialog);
 
     var engravingLayerName = widgets['EngravingLayerName'].text,
-        offset = widgets['Offset'].value;
+        offset = widgets['Offset'].value,
+        skipInner = widgets['SkipInner'].checked;
 
     var indexFile = new QFile(Prepare.includeBasePath + '/index.js'),
         flags = new QIODevice.OpenMode(QIODevice.ReadOnly|QIODevice.Text);
@@ -47,8 +48,8 @@ Prepare.prototype.beginEvent = function () {
     indexFile.close();
 
     try {
-        var fct = new Function('argEngravingLayerName', 'argOffset', contents);
-        fct(engravingLayerName, offset);
+        var fct = new Function('argEngravingLayerName', 'argOffset', 'argSkipInner', contents);
+        fct(engravingLayerName, offset, skipInner);
     } catch (e) {
         EAction.handleUserWarning(e.message);
     }

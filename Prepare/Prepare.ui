@@ -6,19 +6,19 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>270</width>
-    <height>109</height>
+    <width>305</width>
+    <height>139</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Prepare</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="1">
-    <widget class="QLineEdit" name="EngravingLayerName"/>
-   </item>
    <item row="1" column="1">
     <widget class="QDoubleSpinBox" name="Offset">
+     <property name="decimals">
+      <number>3</number>
+     </property>
      <property name="maximum">
       <double>0.300000000000000</double>
      </property>
@@ -34,7 +34,17 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="0" colspan="2">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Layer Engraving</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QLineEdit" name="EngravingLayerName"/>
+   </item>
+   <item row="3" column="0" colspan="2">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -44,10 +54,10 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="label">
+   <item row="2" column="1">
+    <widget class="QCheckBox" name="SkipInner">
      <property name="text">
-      <string>Layer Engraving</string>
+      <string>Skip inner polylines</string>
      </property>
     </widget>
    </item>
@@ -56,6 +66,7 @@
  <tabstops>
   <tabstop>EngravingLayerName</tabstop>
   <tabstop>Offset</tabstop>
+  <tabstop>SkipInner</tabstop>
  </tabstops>
  <resources/>
  <connections>

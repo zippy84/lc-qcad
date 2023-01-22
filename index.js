@@ -25,7 +25,8 @@ try {
 let di, doc, filePath;
 
 const engravingLayerName = typeof argEngravingLayerName !== 'undefined' ? argEngravingLayerName : 'Gravur',
-    offset = typeof argOffset !== 'undefined' ? argOffset : 0.05;
+    offset = typeof argOffset !== 'undefined' ? argOffset : 0.05,
+    skipInner = typeof argSkipInner !== 'undefined' ? argSkipInner : false;
 
 if (_window !== null) {
     di = _window.getDocumentInterface();
@@ -636,7 +637,7 @@ rects.forEach(rect => {
     }
 });
 
-qDebug(JSON.stringify(data));
+// qDebug(JSON.stringify(data));
 
 let i = 0;
 
@@ -686,7 +687,7 @@ for (const [parent, childs] of Object.entries(data)) {
 
 // offset
 
-const outerEnts = [];
+const outerEnts = []; // wird nicht benötigt
 
 const refs2 = doc.queryAllBlockReferences();
 
@@ -698,40 +699,22 @@ for (const refId of refs2) {
 
     // qDebug(ref.getReferencedBlockName());
 
-    const itms = doc.queryBlockEntities(ref.getReferencedBlockId())
-        .map(itm => doc.queryEntity(itm))
-        .filter(itm => isPolylineEntity(itm) && itm.isClosed() && itm.getLayerName() !== engravingLayerName);
-
-    const filtered = [];
+    const filtered = doc.queryBlockEntities(ref.getReferencedBlockId())
+        .map(id => doc.queryEntity(id))
+        .filter(ent => isPolylineEntity(ent) && ent.isClosed() && ent.getLayerName() !== engravingLayerName);
 
     const _op = new RModifyObjectsOperation();
     _op.setTransactionGroup(group);
 
-    for (const itmA of itms) {
-        let isInner = false;
+    for (const ent of filtered) {
+        const sh = ent.castToShape();
 
-        const shA = itmA.castToShape();
-
-        for (const itmB of itms) {
-            if (itmA !== itmB) {
-                const shB = itmB.castToShape();
-
-                if (shB.containsShape(shA)) {
-                    isInner = true;
-
-                    break;
-                }
-            }
-        }
-
-        if (isInner ^ shA.getOrientation() === RS.CW) {
+        if (childIds.includes(ent.getId()) ^ sh.getOrientation() === RS.CW) {
             // richtung umkehren
 
-            itmA.reverse();
-            _op.addObject(itmA, false);
+            ent.reverse();
+            _op.addObject(ent, false);
         }
-
-        filtered.push(itmA);
     }
 
     di.applyOperation(_op);
@@ -746,7 +729,7 @@ for (const refId of refs2) {
             const newPl = new RPolyline(expl); // *
             newPl.convertToClosed();
 
-            if (offset > 0) {
+            if (!(skipInner && childIds.includes(ent.getId())) && offset > 0) {
                 const worker = new RPolygonOffset(offset, 1, RVector.invalid, RS.JoinMiter, false);
                 worker.setForceSide(RS.RightHand);
                 worker.addPolyline(newPl);
