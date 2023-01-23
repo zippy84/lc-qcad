@@ -703,13 +703,36 @@ for (const refId of refs2) {
         .map(id => doc.queryEntity(id))
         .filter(ent => isPolylineEntity(ent) && ent.isClosed() && ent.getLayerName() !== engravingLayerName);
 
+    const innerIds = [];
+
     const _op = new RModifyObjectsOperation();
     _op.setTransactionGroup(group);
 
     for (const ent of filtered) {
         const sh = ent.castToShape();
 
-        if (childIds.includes(ent.getId()) ^ sh.getOrientation() === RS.CW) {
+        let isInner = false;
+
+        if (allIds.includes(ent.getId())) {
+            isInner = childIds.includes(ent.getId());
+        } else {
+            for (const _ent of filtered) {
+                if (ent !== _ent) {
+                    const _sh = _ent.castToShape();
+
+                    if (_sh.containsShape(sh)) {
+                        isInner = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (isInner) {
+            innerIds.push(ent.getId());
+        }
+
+        if (isInner ^ sh.getOrientation() === RS.CW) {
             // richtung umkehren
 
             ent.reverse();
@@ -729,7 +752,7 @@ for (const refId of refs2) {
             const newPl = new RPolyline(expl); // *
             newPl.convertToClosed();
 
-            if (!(skipInner && childIds.includes(ent.getId())) && offset > 0) {
+            if (!(skipInner && innerIds.includes(ent.getId())) && offset > 0) {
                 const worker = new RPolygonOffset(offset, 1, RVector.invalid, RS.JoinMiter, false);
                 worker.setForceSide(RS.RightHand);
                 worker.addPolyline(newPl);
