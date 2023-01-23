@@ -252,8 +252,6 @@ AddGaps.prototype.mouseMoveEvent = function (event) {
                 if (isLineShape(seg)) {
                     var shape = seg.clone();
 
-                    shape.getMiddlePoint()
-
                     var pA = shape.getStartPoint(),
                         pB = shape.getEndPoint();
 
