@@ -356,7 +356,8 @@ for (const p of pts) {
         for (const id of nearest) {
             const near = pts[id];
 
-            if (near.entId != p.entId
+            if (near.layId == p.layId
+                && near.entId != p.entId
                 && typeof dupls[near.entId] === 'undefined'
                 && near.endPt.equalsFuzzy2D(p.endPt, 1e-5)) {
 
@@ -623,7 +624,11 @@ rects.forEach(rect => {
 const parentIds = Object.keys(data).map(id => parseInt(id)),
     childIds = Object.values(data).flat();
 
-if (parentIds.some(id => childIds.includes(id))) {
+const invalidIds = parentIds.filter(id => childIds.includes(id));
+
+if (invalidIds.length) {
+    di.selectEntities(invalidIds);
+
     throw new Error('Nesting detected.');
 }
 
