@@ -399,13 +399,12 @@ for (const p of pts2) {
 
         const nearest = tree2.within(x, y, 1e-5);
 
-        const found = nearest.filter(id => {
-            const {entId, layId} = pts2[id];
-            return entId !== p.entId && layId === p.layId;
-        });
+        const found = nearest.filter(id => pts2[id].entId !== p.entId);
 
         if (found.length > 1) {
-            throw new Error(`Ambiguous connection found at [${x}, ${y}].`);
+            di.selectEntities(nearest.map(id => pts2[id].entId));
+
+            throw new Error('Ambiguous connection found.');
 
         } else if (found.length === 1) {
             const q = pts2[found[0]],
