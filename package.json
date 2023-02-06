@@ -1,11 +1,10 @@
 {
   "name": "lc-qcad",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.1.0",
+  "description": "QCAD plugins for laser cutting",
   "main": "index.js",
   "scripts": {
-    "build": "rollup --config",
-    "deploy": "./deploy.sh"
+    "build": "rollup --config"
   },
   "author": "Ronald Römer",
   "repository": "github:zippy84/lc-qcad",
