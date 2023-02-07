@@ -154,9 +154,7 @@ filtered.forEach(function (id) {
                         if (vert.equalsFuzzy2D(_p)) {
                             var end = index > 0 ? verts[0] : verts[1];
 
-                            var l = vert.getDistanceTo2D(end);
-
-                            cands.push({start: vert, end: end, l: l});
+                            cands.push({start: vert, end: end});
                         }
                     });
                 }
@@ -222,35 +220,32 @@ filtered.forEach(function (id) {
                 var op = new RAddObjectOperation(dim);
                 di.applyOperation(op);
 
+                ent.setColor(new RColor('Blue'));
+
+                var op = new RModifyObjectOperation(ent);
+                di.applyOperation(op);
+
             } else {
                 if (_cands.length === 2) {
-                    if (Math.abs(_cands[0].l-_cands[1].l) < 1e-5) {
-                        var data = new RDimAlignedData();
+                    var data = new RDimRotatedData();
 
-                        data.setExtensionPoint1(_cands[0].end);
-                        data.setExtensionPoint2(_cands[1].end);
-                        data.setDefinitionPoint(pA);
+                    data.setExtensionPoint1(_cands[0].end);
+                    data.setExtensionPoint2(_cands[1].end);
+                    data.setDefinitionPoint(pA);
 
-                        var dim = new RDimAlignedEntity(doc, data);
-
-                        var op = new RAddObjectOperation(dim);
-                        di.applyOperation(op);
-                    } else {
-                        var data = new RDimRotatedData();
-
-                        data.setExtensionPoint1(_cands[0].end);
-                        data.setExtensionPoint2(_cands[1].end);
-                        data.setDefinitionPoint(pA);
-
-                        if (line.isVertical()) {
-                            data.setRotation(Math.PI/2);
-                        }
-
-                        var dim = new RDimRotatedEntity(doc, data);
-
-                        var op = new RAddObjectOperation(dim);
-                        di.applyOperation(op);
+                    if (line.isVertical()) {
+                        data.setRotation(Math.PI/2);
                     }
+
+                    var dim = new RDimRotatedEntity(doc, data);
+
+                    var op = new RAddObjectOperation(dim);
+                    di.applyOperation(op);
+
+                    ent.setColor(new RColor('Blue'));
+
+                    var op = new RModifyObjectOperation(ent);
+                    di.applyOperation(op);
 
                 }
             }
@@ -349,7 +344,7 @@ lays.forEach(function (id) {
         && typeof styles[layName]['line-color'] !== 'undefined') {
         lay.setColor(new RColor(styles[layName]['line-color']));
     } else {
-        lay.setColor(new RColor('#000000'));
+        lay.setColor(new RColor('Black'));
     }
 
     var op = new RModifyObjectOperation(lay);
@@ -391,6 +386,16 @@ all.forEach(function (id) {
 
 });
 
+var redLines = filtered.filter(function (id) {
+    var ent = doc.queryEntityDirect(id);
+    return ent.getColor().red() === 255;
+});
+
+if (redLines.length === 0) {
+    var op = new RDeleteObjectOperation(doc.queryLayer('Bemaßungen'));
+    di.applyOperation(op);
+}
+
 // layer löschen
 
 var op = new RDeleteObjectsOperation();
@@ -410,7 +415,9 @@ lays.forEach(function (id) {
     } else if (layName === 'Markierungen') {
         op.deleteObject(lay);
     } else if (typeof styles[layName] === 'undefined') {
-        qDebug('->', layName);
+        if (id !== doc.getLayer0Id()) {
+            qDebug('->', layName);
+        }
     }
 });
 
