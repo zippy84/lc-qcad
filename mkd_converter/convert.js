@@ -20,6 +20,83 @@ dir.cd('out');
 
 var fileOut = new QFileInfo(dir, info.baseName() + '_.dxf').filePath();
 
+var styles =  {
+    '0.35_Schwarz': { 'hatch-color': '#606060' },
+    '0.5mm': { 'hatch-color': '#66cc99' },
+    '0.65mm': { 'hatch-color': '#00ccff' },
+    '1mm': { 'hatch-color': '#66cccc' },
+    '1mm_Fenster': { 'hatch-color': '#ff99cc' },
+    '1.5mm': { 'hatch-color': '#ff6666' },
+    '2mm': { 'hatch-color': '#e0e0e0' },
+    '2mm_Grundplatte': { 'hatch-color': '#e0e0e0' },
+    '3mm': { 'hatch-color': '#00ff00' },
+    '1mm_Holz': { 'hatch-color': '#808080' },
+    'Test': { 'hatch-color': '#ff0000' },
+    'Türen': { 'hatch-color': '#61514e' },
+    'Tür': { 'line-color': '#00ff00' },
+    'Rot': { 'hatch-color': '#cc3300' },
+    'Rot2': { 'hatch-color': '#cc3300' },
+    'Fundament': { 'hatch-color': '#ccc4ba' },
+    'Dach': { 'hatch-color': '#808080' },
+    'Fachwerk': { 'hatch-color': '#3e2512' },
+    'Fenster': { 'hatch-color': '#f2f2f2' },
+    'Flächen': { 'hatch-color': '#00ffff' },
+    'Ätzen_Rot': { 'hatch-color': '#ff0000' },
+    'Ätzen_Grün': { 'hatch-color': '#00ff00' },
+    'Ätzen_Schwarz': { 'hatch-color': '#000000' },
+    'Fase vorne': { 'line-color': '#00ff00' },
+    'Fase hinten': { 'line-color': '#ff00ff' },
+    'Aufmaß': { 'line-color': '#0000ff' },
+    'Zeichnung': { 'line-color': '#ff0000' },
+    'Verzierung': { 'hatch-color': '#f2f2f2' },
+    'Konstruktiv': { 'hatch-color': '#c0c0c0' },
+    'Schindeln_Hintergrund': { 'hatch-color': '#f2f2f2' },
+
+    // der vollständigkeit halber
+    'Gravur': {},
+    'Gravur_Rand': {},
+    'Gravur_Schindeln': {},
+    'Schwarz': {},
+    'Schwarz2': {},
+    'Ziegelung': {},
+    'Schindeln': {},
+    'Schindeln_2': {},
+    'Schindeln_3': {},
+
+    'Dach_Druck': { 'hatch-color': '#007fff' }
+};
+
+// modfiziert die layer
+
+var lays = doc.queryAllLayers();
+
+lays.forEach(function (id) {
+    var lay = doc.queryLayerDirect(id);
+
+    lay.setOff(false);
+    lay.setFrozen(false);
+    lay.setLocked(false);
+    lay.setPlottable(true);
+    lay.setSnappable(true);
+
+    lay.setLineweight(RLineweight.Weight025);
+    lay.setLinetypeId(doc.getLinetypeId('CONTINUOUS'));
+
+    var layName = lay.getName();
+
+    if (typeof styles[layName] !== 'undefined'
+        && typeof styles[layName]['line-color'] !== 'undefined') {
+        lay.setColor(new RColor(styles[layName]['line-color']));
+    } else {
+        lay.setColor(new RColor('Black'));
+    }
+
+    var op = new RModifyObjectOperation(lay);
+    di.applyOperation(op);
+});
+
+// erstellt bemaßungen
+
 var entities = doc.queryLayerEntities(doc.queryLayer('Bemaßungen').getId(), true);
 
 var filtered = [],
@@ -279,77 +356,6 @@ doc.setKnownVariable(RS.DIMDEC, 4);
 
 doc.setKnownVariable(RS.DIMAUNIT, RS.DegreesDecimal);
 doc.setKnownVariable(RS.DIMADEC, 4);
-
-var styles =  {
-    '0.35_Schwarz': { 'hatch-color': '#606060' },
-    '0.5mm': { 'hatch-color': '#66cc99' },
-    '0.65mm': { 'hatch-color': '#00ccff' },
-    '1mm': { 'hatch-color': '#66cccc' },
-    '1.5mm': { 'hatch-color': '#ff6666' },
-    '2mm': { 'hatch-color': '#e0e0e0' },
-    '2mm_Grundplatte': { 'hatch-color': '#e0e0e0' },
-    '3mm': { 'hatch-color': '#00ff00' },
-    '1mm_Holz': { 'hatch-color': '#808080' },
-    'Test': { 'hatch-color': '#ff0000' },
-    'Türen': { 'hatch-color': '#61514e' },
-    'Rot': { 'hatch-color': '#cc3300' },
-    'Rot2': { 'hatch-color': '#cc3300' },
-    'Fundament': { 'hatch-color': '#ccc4ba' },
-    'Dach': { 'hatch-color': '#808080' },
-    'Fachwerk': { 'hatch-color': '#3e2512' },
-    'Fenster': { 'hatch-color': '#f2f2f2' },
-    'Flächen': { 'hatch-color': '#00ffff' },
-    'Ätzen_Rot': { 'hatch-color': '#ff0000' },
-    'Ätzen_Grün': { 'hatch-color': '#00ff00' },
-    'Ätzen_Schwarz': { 'hatch-color': '#000000' },
-    'Fase vorne': { 'line-color': '#00ff00' },
-    'Fase hinten': { 'line-color': '#ff00ff' },
-    'Aufmaß': { 'line-color': '#0000ff' },
-    'Zeichnung': { 'line-color': '#ff0000' },
-    'Verzierung': { 'hatch-color': '#f2f2f2' },
-    'Konstruktiv': { 'hatch-color': '#c0c0c0' },
-    'Schindeln_Hintergrund': { 'hatch-color': '#f2f2f2' },
-
-    // der vollständigkeit halber
-    'Gravur': {},
-    'Gravur_Rand': {},
-    'Gravur_Schindeln': {},
-    'Schwarz': {},
-    'Schwarz2': {},
-    'Ziegelung': {},
-    'Schindeln': {},
-    'Schindeln_2': {},
-    'Schindeln_3': {},
-};
-
-// modfiziert die layer
-
-var lays = doc.queryAllLayers();
-
-lays.forEach(function (id) {
-    var lay = doc.queryLayerDirect(id);
-
-    lay.setOff(false);
-    lay.setFrozen(false);
-    lay.setLocked(false);
-    lay.setPlottable(true);
-    lay.setSnappable(true);
-
-    lay.setLineweight(RLineweight.Weight025);
-    lay.setLinetypeId(doc.getLinetypeId('CONTINUOUS'));
-
-    var layName = lay.getName();
-
-    if (typeof styles[layName] !== 'undefined'
-        && typeof styles[layName]['line-color'] !== 'undefined') {
-        lay.setColor(new RColor(styles[layName]['line-color']));
-    } else {
-        lay.setColor(new RColor('Black'));
-    }
-
-    var op = new RModifyObjectOperation(lay);
-    di.applyOperation(op);
-});
 
 // attribute vereinheitlichen
 
