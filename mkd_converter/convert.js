@@ -51,6 +51,8 @@ var styles =  {
     'Verzierung': { 'hatch-color': '#f2f2f2' },
     'Konstruktiv': { 'hatch-color': '#c0c0c0' },
     'Schindeln_Hintergrund': { 'hatch-color': '#f2f2f2' },
+    'Dach_Druck': { 'hatch-color': '#007fff' },
+    'Schild': { 'hatch-color': '#000000' },
 
     // der vollständigkeit halber
     'Gravur': {},
@@ -62,8 +64,6 @@ var styles =  {
     'Schindeln': {},
     'Schindeln_2': {},
     'Schindeln_3': {},
-
-    'Dach_Druck': { 'hatch-color': '#007fff' }
 };
 
 // modfiziert die layer
@@ -356,6 +356,111 @@ doc.setKnownVariable(RS.DIMDEC, 4);
 
 doc.setKnownVariable(RS.DIMAUNIT, RS.DegreesDecimal);
 doc.setKnownVariable(RS.DIMADEC, 4);
+
+// schilder
+
+var blocks = [];
+
+doc.queryAllBlockReferences().forEach(function (id) {
+    var ent = doc.queryEntityDirect(id),
+        layName = ent.getLayerName(),
+        blockId = ent.getReferencedBlockId();
+
+    if (layName === 'Schild') {
+        blocks.push(blockId);
+    }
+});
+
+blocks = blocks.filter(function (v, i, a) { return a.indexOf(v) === i; });
+
+blocks.forEach(function (blockId) {
+    var entities = doc.queryBlockEntities(blockId);
+
+    var data = [];
+
+    entities.forEach(function (_id) {
+        var ent = doc.queryEntityDirect(_id);
+
+        if (isHatchEntity(ent)) {
+            var bbox = ent.getBoundingBox(),
+                area = bbox.getWidth()*bbox.getHeight();
+
+            var dat = {ent: ent, lines: [], bbox: bbox, area: area};
+
+            for (var i = 0; i < ent.getLoopCount(); i++) {
+                var shapes = ent.getLoopBoundary(i);
+
+                var pl = new RPolyline(shapes);
+
+                dat.lines.push(pl);
+            }
+
+            data.push(dat);
+        }
+    });
+
+    data.sort(function (a, b) { return b.area-a.area; });
+
+    // qDebug(data.map(function (dat) { return dat.area; } ));
+
+    var lines = [];
+
+    if (data[0].lines.length === 1) {
+        var a = data.shift(),
+            b = data.shift();
+
+        var op = new RDeleteObjectsOperation();
+        op.deleteObject(a.ent);
+        op.deleteObject(b.ent);
+        di.applyOperation(op);
+
+        var hatchData = new RHatchData();
+        hatchData.newLoop()
+        hatchData.addBoundary(a.lines[0]);
+        hatchData.newLoop()
+        hatchData.addBoundary(b.lines[0]);
+
+        var hatch = new RHatchEntity(doc, hatchData);
+        hatch.setBlockId(blockId);
+        hatch.setLayerName('Schild');
+
+        var op = new RAddObjectOperation(hatch, false);
+        di.applyOperation(op);
+
+        lines.push(a.lines[0]);
+        lines.push(b.lines[0]);
+
+    } else if (data[0].lines.length === 2) {
+        var op = new RDeleteObjectOperation(data[1].ent);
+        di.applyOperation(op);
+
+        data.splice(1, 1);
+    }
+
+    data.forEach(function (dat) {
+        Array.prototype.push.apply(lines, dat.lines);
+    });
+
+    var op = new RAddObjectsOperation();
+
+    lines.forEach(function (line) {
+        var _line = shapeToEntity(doc, line);
+        _line.setBlockId(blockId);
+        _line.setLayerName('Schild');
+        op.addObject(_line, false);
+    });
+
+    di.applyOperation(op);
+
+    var op = new RModifyObjectsOperation();
+
+    data.forEach(function (dat) {
+        dat.ent.setLayerName('Schild');
+        op.addObject(dat.ent, false);
+    });
+
+    di.applyOperation(op);
+});
 
 // attribute vereinheitlichen
 
