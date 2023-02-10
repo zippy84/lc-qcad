@@ -3,31 +3,42 @@ This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 */
 
+import 'core-js/features/array/includes';
+import 'core-js/features/object/assign';
+
+import 'core-js/features/typed-array/float64-array';
+import 'core-js/features/typed-array/uint16-array';
+import 'core-js/features/typed-array/uint32-array';
+
+import KDBush from 'kdbush';
+
 include('scripts/library.js');
 
-var doc = new RDocument(new RMemoryStorage(), new RSpatialIndexNavel());
-var di = new RDocumentInterface(doc);
+const doc = new RDocument(new RMemoryStorage(), new RSpatialIndexNavel());
+const di = new RDocumentInterface(doc);
 
-var fileIn = args[args.length-1];
-
-qDebug(fileIn);
+const fileIn = args[args.length-1];
 
 di.importFile(fileIn);
 
-var info = new QFileInfo(fileIn);
-var dir = info.absoluteDir();
+const info = new QFileInfo(fileIn);
+const dir = info.absoluteDir();
 dir.cd('out');
 
-var fileOut = new QFileInfo(dir, info.baseName() + '_.dxf').filePath();
+const fileName = info.baseName();
 
-var styles =  {
+qDebug('->', fileName);
+
+const fileOut = new QFileInfo(dir, fileName + '_.dxf').filePath();
+
+const styles =  {
     '0.35_Schwarz': { 'hatch-color': '#606060' },
     '0.5mm': { 'hatch-color': '#66cc99' },
     '0.65mm': { 'hatch-color': '#00ccff' },
     '1mm': { 'hatch-color': '#66cccc' },
     '1mm_Fenster': { 'hatch-color': '#ff99cc' },
     '1.5mm': { 'hatch-color': '#ff6666' },
-    '2mm': { 'hatch-color': '#e0e0e0' },
+    '2mm': { 'hatch-color': '#e0e0e0' }, // '#ff0066'
     '2mm_Grundplatte': { 'hatch-color': '#e0e0e0' },
     '3mm': { 'hatch-color': '#00ff00' },
     '1mm_Holz': { 'hatch-color': '#808080' },
@@ -68,10 +79,10 @@ var styles =  {
 
 // modfiziert die layer
 
-var lays = doc.queryAllLayers();
+const lays = doc.queryAllLayers();
 
-lays.forEach(function (id) {
-    var lay = doc.queryLayerDirect(id);
+lays.forEach(id => {
+    const lay = doc.queryLayerDirect(id);
 
     lay.setOff(false);
     lay.setFrozen(false);
@@ -82,7 +93,7 @@ lays.forEach(function (id) {
     lay.setLineweight(RLineweight.Weight025);
     lay.setLinetypeId(doc.getLinetypeId('CONTINUOUS'));
 
-    var layName = lay.getName();
+    const layName = lay.getName();
 
     if (typeof styles[layName] !== 'undefined'
         && typeof styles[layName]['line-color'] !== 'undefined') {
@@ -91,19 +102,19 @@ lays.forEach(function (id) {
         lay.setColor(new RColor('Black'));
     }
 
-    var op = new RModifyObjectOperation(lay);
+    const op = new RModifyObjectOperation(lay);
     di.applyOperation(op);
 });
 
 // erstellt bemaßungen
 
-var entities = doc.queryLayerEntities(doc.queryLayer('Bemaßungen').getId(), true);
+const entities = doc.queryLayerEntities(doc.queryLayer('Bemaßungen').getId(), true);
 
-var filtered = [],
+const filtered = [],
     arrows = [];
 
-entities.forEach(function (id) {
-    var ent = doc.queryEntityDirect(id),
+entities.forEach(id => {
+    const ent = doc.queryEntityDirect(id),
         sh = ent.castToShape();
 
     if (isPolylineEntity(ent) && !sh.hasArcSegments()) {
@@ -115,12 +126,13 @@ entities.forEach(function (id) {
     }
 });
 
-var lines = [],
-    deferred = [];
+let lines = [];
 
-arrows.forEach(function (id) {
-    var connected = doc.queryConnectedEntities(id).filter(function (_id) {
-        return filtered.indexOf(_id) !== -1;
+const deferred = [];
+
+arrows.forEach(id => {
+    const connected = doc.queryConnectedEntities(id).filter(_id => {
+        return filtered.includes(_id);
     });
 
     if (connected.length) {
@@ -130,52 +142,52 @@ arrows.forEach(function (id) {
     }
 });
 
-lines = lines.filter(function (v, i, a) { return a.indexOf(v) === i; });
+lines = lines.filter((v, i, a) => { return a.indexOf(v) === i; });
 
-lines = lines.map(function (id) {
-    var line = doc.queryEntityDirect(id);
+lines = lines.map(id => {
+    const line = doc.queryEntityDirect(id);
 
     line.setColor(new RColor('Red'));
 
-    var op = new RModifyObjectOperation(line);
+    const op = new RModifyObjectOperation(line);
     di.applyOperation(op);
 });
 
-deferred.forEach(function (id) {
-    var ent = doc.queryEntityDirect(id),
+deferred.forEach(id => {
+    const ent = doc.queryEntityDirect(id),
         sh = ent.castToShape(),
         expl = sh.getExploded();
 
-    var lengths = expl.map(function (line) {
+    const lengths = expl.map(line => {
         return line.getLength();
     });
 
-    var minLength = Math.min.apply(Math, lengths),
+    const minLength = Math.min.apply(Math, lengths),
         index = lengths.indexOf(minLength);
 
-    var middle = expl[index].getMiddlePoint();
+    const middle = expl[index].getMiddlePoint();
 
-    var tip = sh.getVertices().filter(function (pt) {
+    let tip = sh.getVertices().filter(pt => {
         return !pt.equalsFuzzy2D(expl[index].getStartPoint()) && !pt.equalsFuzzy2D(expl[index].getEndPoint());
     });
 
     tip = tip.pop();
 
-    var box = new RBox(middle, 1, 1);
+    const box = new RBox(middle, 1, 1);
 
-    var ids = doc.queryIntersectedEntitiesXY(box).filter(function (_id) {
-        return filtered.indexOf(_id) !== -1;
+    const ids = doc.queryIntersectedEntitiesXY(box).filter(_id => {
+        return filtered.includes(_id);
     });
 
     if (ids.length === 1) {
-        var line = doc.queryEntityDirect(ids[0]);
+        const line = doc.queryEntityDirect(ids[0]);
 
-        var _sh = line.castToShape().getSegmentAt(0);
+        const _sh = line.castToShape().getSegmentAt(0);
 
-        var ptA = _sh.getStartPoint(),
+        const ptA = _sh.getStartPoint(),
             ptB = _sh.getEndPoint();
 
-        var left = new RLine(tip, ptA),
+        const left = new RLine(tip, ptA),
             right = new RLine(tip, ptB);
 
         if (left.getDistanceFromStart(middle) > 0) {
@@ -187,49 +199,49 @@ deferred.forEach(function (id) {
 
         line.setColor(new RColor('Red'));
 
-        var op = new RModifyObjectOperation(line);
+        const op = new RModifyObjectOperation(line);
         di.applyOperation(op);
     }
 
 });
 
-filtered.forEach(function (id) {
-    var ent = doc.queryEntityDirect(id);
+filtered.forEach(id => {
+    const ent = doc.queryEntityDirect(id);
 
     if (ent.getColor().red() === 255) {
-        var line = ent.getSegmentAt(0);
+        const line = ent.getSegmentAt(0);
 
-        var pA = line.getStartPoint(),
+        const pA = line.getStartPoint(),
             pB = line.getEndPoint();
 
-        var v = pB.operator_subtract(pA).normalize();
+        const v = pB.operator_subtract(pA).normalize();
 
-        var q = new RVector(-2*v.y, 2*v.x),
+        const q = new RVector(-2*v.y, 2*v.x),
             r = new RVector(2*v.y, -2*v.x);
 
-        var n = new RVector(-v.y, v.x),
+        const n = new RVector(-v.y, v.x),
             d = n.dot(pA);
 
-        var cands = [];
+        const cands = [];
 
-        [[pA, q], [pA, r], [pB, q], [pB, r]].forEach(function (dat) {
-            var p = dat[0],
+        [[pA, q], [pA, r], [pB, q], [pB, r]].forEach(dat => {
+            const p = dat[0],
                w = dat[1];
 
-            var _p = p.operator_add(w),
+            const _p = p.operator_add(w),
                 box = new RBox(_p, 1, 1);
 
-            var ids = doc.queryIntersectedEntitiesXY(box);
+            const ids = doc.queryIntersectedEntitiesXY(box);
 
-            ids.forEach(function (id) {
-                var ent = doc.queryEntityDirect(id);
+            ids.forEach(id => {
+                const ent = doc.queryEntityDirect(id);
                 if (isPolylineEntity(ent)) {
-                    var sh = ent.castToShape(),
+                    const sh = ent.castToShape(),
                         verts = sh.getVertices();
 
-                    verts.forEach(function (vert, index) {
+                    verts.forEach((vert, index) => {
                         if (vert.equalsFuzzy2D(_p)) {
-                            var end = index > 0 ? verts[0] : verts[1];
+                            const end = index > 0 ? verts[0] : verts[1];
 
                             cands.push({start: vert, end: end});
                         }
@@ -239,40 +251,40 @@ filtered.forEach(function (id) {
         });
 
         if (cands.length) {
-            var ptGrps = {};
+            const ptGrps = {};
 
-            cands.forEach(function (cand) {
-                var xS = cand.start.x.toFixed(5),
+            cands.forEach(cand => {
+                const xS = cand.start.x.toFixed(5),
                     yS = cand.start.y.toFixed(5);
 
-                var kS = xS + ',' + yS;
+                const kS = xS + ',' + yS;
 
                 if (typeof ptGrps[kS] === 'undefined') {
                     ptGrps[kS] = {};
                 }
 
-                var xE = cand.end.x.toFixed(5),
+                const xE = cand.end.x.toFixed(5),
                     yE = cand.end.y.toFixed(5);
 
-                var kE = xE + ',' + yE;
+                const kE = xE + ',' + yE;
 
                 ptGrps[kS][kE] = cand;
             });
 
-            var _cands = [];
+            const _cands = [];
 
-            Object.keys(ptGrps).forEach(function (kS) {
-                Object.keys(ptGrps[kS]).forEach(function (kE) {
+            Object.keys(ptGrps).forEach(kS => {
+                Object.keys(ptGrps[kS]).forEach(kE => {
                     _cands.push(ptGrps[kS][kE]);
                 });
             });
 
-            var distGrps = {};
+            const distGrps = {};
 
-            _cands.forEach(function (cand) {
-                var dist = n.dot(cand.end)-d;
+            _cands.forEach(cand => {
+                const dist = n.dot(cand.end)-d;
 
-                var k = dist.toFixed(5);
+                const k = dist.toFixed(5);
 
                 if (typeof distGrps[k] === 'undefined') {
                     distGrps[k] = [];
@@ -281,30 +293,30 @@ filtered.forEach(function (id) {
                 distGrps[k].push(cand);
             });
 
-            var pairs = Object.keys(distGrps).filter(function (k) {
+            const pairs = Object.keys(distGrps).filter(k => {
                 return distGrps[k].length === 2;
             });
 
             if (pairs.length === 1) {
-                var data = new RDimAlignedData();
+                const data = new RDimAlignedData();
 
                 data.setExtensionPoint1(distGrps[pairs[0]][0].end);
                 data.setExtensionPoint2(distGrps[pairs[0]][1].end);
                 data.setDefinitionPoint(pA);
 
-                var dim = new RDimAlignedEntity(doc, data);
+                const dim = new RDimAlignedEntity(doc, data);
 
-                var op = new RAddObjectOperation(dim);
+                const op = new RAddObjectOperation(dim);
                 di.applyOperation(op);
 
                 ent.setColor(new RColor('Blue'));
 
-                var op = new RModifyObjectOperation(ent);
-                di.applyOperation(op);
+                const op2 = new RModifyObjectOperation(ent);
+                di.applyOperation(op2);
 
             } else {
                 if (_cands.length === 2) {
-                    var data = new RDimRotatedData();
+                    const data = new RDimRotatedData();
 
                     data.setExtensionPoint1(_cands[0].end);
                     data.setExtensionPoint2(_cands[1].end);
@@ -314,15 +326,15 @@ filtered.forEach(function (id) {
                         data.setRotation(Math.PI/2);
                     }
 
-                    var dim = new RDimRotatedEntity(doc, data);
+                    const dim = new RDimRotatedEntity(doc, data);
 
-                    var op = new RAddObjectOperation(dim);
+                    const op = new RAddObjectOperation(dim);
                     di.applyOperation(op);
 
                     ent.setColor(new RColor('Blue'));
 
-                    var op = new RModifyObjectOperation(ent);
-                    di.applyOperation(op);
+                    const op2 = new RModifyObjectOperation(ent);
+                    di.applyOperation(op2);
 
                 }
             }
@@ -331,9 +343,9 @@ filtered.forEach(function (id) {
     }
 });
 
-var textSize = 2.5; // mm
+const textSize = 2.5; // mm
 
-var dimx = [
+const dimx = [
     [RS.DIMTXT, 1.0],
     [RS.DIMEXE, 0.5],
     [RS.DIMEXO, 0.25],
@@ -342,7 +354,7 @@ var dimx = [
     [RS.DIMDLI, 2.0]
 ];
 
-dimx.forEach(function (dim) {
+dimx.forEach(dim => {
     doc.setKnownVariable(dim[0], textSize*dim[1]);
 });
 
@@ -357,12 +369,12 @@ doc.setKnownVariable(RS.DIMDEC, 4);
 doc.setKnownVariable(RS.DIMAUNIT, RS.DegreesDecimal);
 doc.setKnownVariable(RS.DIMADEC, 4);
 
-// schilder
+// schilder (sehr speziell)
 
-var blocks = [];
+let blocks = [];
 
-doc.queryAllBlockReferences().forEach(function (id) {
-    var ent = doc.queryEntityDirect(id),
+doc.queryAllBlockReferences().forEach(id => {
+    const ent = doc.queryEntityDirect(id),
         layName = ent.getLayerName(),
         blockId = ent.getReferencedBlockId();
 
@@ -371,26 +383,26 @@ doc.queryAllBlockReferences().forEach(function (id) {
     }
 });
 
-blocks = blocks.filter(function (v, i, a) { return a.indexOf(v) === i; });
+blocks = blocks.filter((v, i, a) => { return a.indexOf(v) === i; });
 
-blocks.forEach(function (blockId) {
-    var entities = doc.queryBlockEntities(blockId);
+blocks.forEach(blockId => {
+    const entities = doc.queryBlockEntities(blockId);
 
-    var data = [];
+    const data = [];
 
-    entities.forEach(function (_id) {
-        var ent = doc.queryEntityDirect(_id);
+    entities.forEach(_id => {
+        const ent = doc.queryEntityDirect(_id);
 
         if (isHatchEntity(ent)) {
-            var bbox = ent.getBoundingBox(),
+            const bbox = ent.getBoundingBox(),
                 area = bbox.getWidth()*bbox.getHeight();
 
-            var dat = {ent: ent, lines: [], bbox: bbox, area: area};
+            const dat = {ent: ent, lines: [], bbox: bbox, area: area};
 
-            for (var i = 0; i < ent.getLoopCount(); i++) {
-                var shapes = ent.getLoopBoundary(i);
+            for (let i = 0; i < ent.getLoopCount(); i++) {
+                const shapes = ent.getLoopBoundary(i);
 
-                var pl = new RPolyline(shapes);
+                const pl = new RPolyline(shapes);
 
                 dat.lines.push(pl);
             }
@@ -399,52 +411,52 @@ blocks.forEach(function (blockId) {
         }
     });
 
-    data.sort(function (a, b) { return b.area-a.area; });
+    data.sort((a, b) => { return b.area-a.area; });
 
-    // qDebug(data.map(function (dat) { return dat.area; } ));
+    // qDebug(data.map(dat => { return dat.area; } ));
 
-    var lines = [];
+    const lines = [];
 
     if (data[0].lines.length === 1) {
-        var a = data.shift(),
+        const a = data.shift(),
             b = data.shift();
 
-        var op = new RDeleteObjectsOperation();
+        const op = new RDeleteObjectsOperation();
         op.deleteObject(a.ent);
         op.deleteObject(b.ent);
         di.applyOperation(op);
 
-        var hatchData = new RHatchData();
+        const hatchData = new RHatchData();
         hatchData.newLoop()
         hatchData.addBoundary(a.lines[0]);
         hatchData.newLoop()
         hatchData.addBoundary(b.lines[0]);
 
-        var hatch = new RHatchEntity(doc, hatchData);
+        const hatch = new RHatchEntity(doc, hatchData);
         hatch.setBlockId(blockId);
         hatch.setLayerName('Schild');
 
-        var op = new RAddObjectOperation(hatch, false);
-        di.applyOperation(op);
+        const op2 = new RAddObjectOperation(hatch, false);
+        di.applyOperation(op2);
 
         lines.push(a.lines[0]);
         lines.push(b.lines[0]);
 
     } else if (data[0].lines.length === 2) {
-        var op = new RDeleteObjectOperation(data[1].ent);
+        const op = new RDeleteObjectOperation(data[1].ent);
         di.applyOperation(op);
 
         data.splice(1, 1);
     }
 
-    data.forEach(function (dat) {
+    data.forEach(dat => {
         Array.prototype.push.apply(lines, dat.lines);
     });
 
-    var op = new RAddObjectsOperation();
+    const op = new RAddObjectsOperation();
 
-    lines.forEach(function (line) {
-        var _line = shapeToEntity(doc, line);
+    lines.forEach(line => {
+        const _line = shapeToEntity(doc, line);
         _line.setBlockId(blockId);
         _line.setLayerName('Schild');
         op.addObject(_line, false);
@@ -452,37 +464,37 @@ blocks.forEach(function (blockId) {
 
     di.applyOperation(op);
 
-    var op = new RModifyObjectsOperation();
+    const op2 = new RModifyObjectsOperation();
 
-    data.forEach(function (dat) {
+    data.forEach(dat => {
         dat.ent.setLayerName('Schild');
-        op.addObject(dat.ent, false);
+        op2.addObject(dat.ent, false);
     });
 
-    di.applyOperation(op);
+    di.applyOperation(op2);
 });
 
 // attribute vereinheitlichen
 
-var all = doc.queryAllEntities(false, true, [RS.EntityArc, RS.EntityLine, RS.EntityCircle, RS.EntityPolyline, RS.EntityEllipse]);
+const all = doc.queryAllEntities(false, true, [RS.EntityArc, RS.EntityLine, RS.EntityCircle, RS.EntityPolyline, RS.EntityEllipse]);
 
-all.forEach(function (id) {
-    var ent = doc.queryEntityDirect(id),
+all.forEach(id => {
+    const ent = doc.queryEntityDirect(id),
         layName = ent.getLayerName();
 
     if (layName !== 'Bemaßungen') {
         ent.setLineweight(RLineweight.WeightByLayer);
         ent.setColor(new RColor(RColor.ByLayer));
 
-        var op = new RModifyObjectOperation(ent);
+        const op = new RModifyObjectOperation(ent);
         di.applyOperation(op);
     }
 });
 
-var all = doc.queryAllEntities(false, true, [RS.EntityHatch]);
+const all2 = doc.queryAllEntities(false, true, [RS.EntityHatch]);
 
-all.forEach(function (id) {
-    var ent = doc.queryEntityDirect(id),
+all2.forEach(id => {
+    const ent = doc.queryEntityDirect(id),
         layName = ent.getLayerName();
 
     if (typeof styles[layName] !== 'undefined'
@@ -491,30 +503,199 @@ all.forEach(function (id) {
         ent.setLineweight(RLineweight.WeightByLayer);
         ent.setColor(new RColor(styles[layName]['hatch-color']));
 
-        var op = new RModifyObjectOperation(ent);
+        const op = new RModifyObjectOperation(ent);
         di.applyOperation(op);
     }
 
 });
 
-var redLines = filtered.filter(function (id) {
-    var ent = doc.queryEntityDirect(id);
+// vereinfacht die polylines (auch in hatches)
+
+function simplifyPolyline(pl) {
+    const pts = [];
+
+    const shapes = pl.getExploded().filter(shape => shape.getLength() > 1e-5).map(shape => shape.clone());
+
+    shapes.forEach((sh, shapeId) => {
+        if (isArcShape(sh) || isLineShape(sh)) {
+            const ptA = sh.getStartPoint(),
+                ptB = sh.getEndPoint();
+
+            pts.push({shapeId, startPt: ptA, endPt: ptB, end: 0});
+            pts.push({shapeId, startPt: ptB, endPt: ptA, end: 1});
+        }
+    });
+
+    const tree = new KDBush(pts, p => p.startPt.x, p => p.startPt.y);
+
+    const skips = {};
+
+    for (const p of pts) {
+        if (typeof skips[p.shapeId] === 'undefined') {
+            const {x, y} = p.startPt;
+
+            const nearest = tree.within(x, y, 1e-5);
+
+            const found = nearest.filter(id => pts[id].shapeId !== p.shapeId);
+
+            if (found.length > 1) {
+                throw new Error(`Ambiguous connection found near (${x}, ${y}).`);
+
+            } else if (found.length === 1) {
+                const q = pts[found[0]],
+                    sh = shapes[q.shapeId];
+
+                if (isLineShape(sh)) {
+                    if (q.end === 0) {
+                        sh.setStartPoint(new RVector(x, y));
+                    } else {
+                        sh.setEndPoint(new RVector(x, y));
+                    }
+
+                } else {
+                    // Arc
+                    let phi = sh.getAngleLength()/2;
+
+                    const pt = q.end === 1 ? sh.getStartPoint() : sh.getEndPoint();
+
+                    const v = new RVector(pt.x-x, pt.y-y),
+                        l = v.getMagnitude()/2;
+
+                    v.normalize();
+
+                    const d = l/Math.tan(phi);
+
+                    const f = (q.end === 0 ^ sh.isReversed()) ? 1 : -1;
+
+                    const c = new RVector(x+l*v.x-f*d*v.y, y+l*v.y+f*d*v.x);
+
+                    const vA = new RVector(x-c.x, y-c.y),
+                        vB = new RVector(pt.x-c.x, pt.y-c.y);
+
+                    const r = vA.getMagnitude();
+
+                    vA.normalize();
+                    vB.normalize();
+
+                    let angA = Math.atan2(vA.y, vA.x);
+                    if (angA < 0) {
+                        angA += 2*Math.PI;
+                    }
+
+                    let angB = Math.atan2(vB.y, vB.x);
+                    if (angB < 0) {
+                        angB += 2*Math.PI;
+                    }
+
+                    sh.setCenter(c);
+                    sh.setRadius(r);
+
+                    if (q.end === 0) {
+                        sh.setStartAngle(angA);
+                        sh.setEndAngle(angB);
+                    } else {
+                        sh.setEndAngle(angA);
+                        sh.setStartAngle(angB);
+                    }
+                }
+
+                skips[q.shapeId] = null;
+            }
+        }
+    }
+
+    return shapes;
+}
+
+let deletedShapes = 0;
+
+const all3 = doc.queryAllEntities(false, true, [RS.EntityPolyline, RS.EntityHatch]);
+
+all3.forEach(id => {
+    const ent = doc.queryEntityDirect(id),
+        layName = ent.getLayerName(),
+        blockId = ent.getBlockId();
+
+    if (isPolylineEntity(ent)) {
+        const pl = ent.castToShape();
+
+        try {
+            const shapes = simplifyPolyline(pl);
+            ent.setShape(new RPolyline(shapes));
+
+            const op = new RModifyObjectOperation(ent);
+            di.applyOperation(op);
+
+            deletedShapes += pl.countSegments()-shapes.length;
+        } catch (err) {
+            qDebug('->', err.message, `layer ${layName}`);
+        }
+    } else {
+        const hatchData = new RHatchData();
+
+        for (let i = 0; i < ent.getLoopCount(); i++) {
+            const pl = new RPolyline(ent.getLoopBoundary(i));
+
+            try {
+                const shapes = simplifyPolyline(pl);
+
+                hatchData.newLoop();
+                hatchData.addBoundary(new RPolyline(shapes));
+
+                deletedShapes += pl.countSegments()-shapes.length;
+            } catch (err) {
+                qDebug('->', err.message, `layer ${layName}`);
+
+                hatchData.newLoop();
+                hatchData.addBoundary(pl);
+            }
+        }
+
+        const hatch = new RHatchEntity(doc, hatchData);
+        hatch.setBlockId(blockId);
+        hatch.copyAttributesFrom(ent.data(), false);
+
+        const op = new RMixedOperation();
+        op.addObject(hatch, false);
+        op.deleteObject(ent);
+        di.applyOperation(op);
+    }
+
+});
+
+const all4 = doc.queryAllEntities(false, true, [RS.EntityLine, RS.EntityArc]);
+
+all4.forEach(id => {
+    const ent = doc.queryEntityDirect(id);
+
+    if (ent.getLength() < 1e-5) {
+        const op = new RDeleteObjectOperation(ent);
+        di.applyOperation(op);
+
+        deletedShapes++;
+    }
+});
+
+qDebug('->', deletedShapes);
+
+// löscht die alten bemaßungen
+
+const redLines = filtered.filter(id => {
+    const ent = doc.queryEntityDirect(id);
     return ent.getColor().red() === 255;
 });
 
 if (redLines.length === 0) {
-    var op = new RDeleteObjectOperation(doc.queryLayer('Bemaßungen'));
+    const op = new RDeleteObjectOperation(doc.queryLayer('Bemaßungen'));
     di.applyOperation(op);
 }
 
 // layer löschen
 
-var op = new RDeleteObjectsOperation();
+const op = new RDeleteObjectsOperation();
 
-var lays = doc.queryAllLayers();
-
-lays.forEach(function (id) {
-    var lay = doc.queryLayer(id),
+lays.forEach(id => {
+    const lay = doc.queryLayer(id),
         layName = lay.getName();
 
     if (doc.queryLayerEntities(id, true).length === 0) {
