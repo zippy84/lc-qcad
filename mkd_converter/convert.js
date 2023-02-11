@@ -663,9 +663,11 @@ all3.forEach(id => {
 
 });
 
-qDebug('->', deletedShapes);
+qDebug('-> deletedShapes', deletedShapes);
 
 // wandelt in lines und arcs um
+
+let deletedLines = 0;
 
 const op = new RMixedOperation();
 
@@ -674,7 +676,11 @@ const all4 = doc.queryAllEntities(false, true, [RS.EntityPolyline]);
 all4.forEach(entId => {
     const ent = doc.queryEntity(entId);
 
-    if (ent.countSegments() === 1) {
+    if (ent.getLength() < .01) {
+        op.deleteObject(ent);
+        deletedLines++;
+
+    } else if (ent.countSegments() === 1) {
         const first = ent.getSegmentAt(0);
 
         if (isLineShape(first) || isArcShape(first)) {
@@ -690,6 +696,8 @@ all4.forEach(entId => {
 });
 
 di.applyOperation(op);
+
+qDebug('-> deletedLines', deletedLines);
 
 // duplikate löschen
 
@@ -743,7 +751,7 @@ for (const p of pts) {
     }
 }
 
-qDebug('->', Object.keys(dupls));
+// qDebug('->', Object.keys(dupls));
 
 const op2 = new RDeleteObjectsOperation();
 
@@ -752,6 +760,8 @@ for (const dupl of Object.keys(dupls)) {
 }
 
 di.applyOperation(op2);
+
+qDebug('-> deletedDuplicates', Object.keys(dupls).length);
 
 // löscht die alten bemaßungen
 
