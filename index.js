@@ -68,14 +68,6 @@ function setStyle(ent) {
     ent.setColor(new RColor(RColor.ByLayer));
 }
 
-function getAngle(a, b) {
-    let ang = Math.atan2(a.x*b.y-b.x*a.y, a.x*b.x+a.y*b.y);
-    if (ang < 0) {
-        ang += 2*Math.PI;
-    }
-    return ang;
-}
-
 let newLay = doc.queryLayer('New');
 
 if (isNull(newLay)) {
@@ -449,10 +441,15 @@ for (const p of pts2) {
                 vA.normalize();
                 vB.normalize();
 
-                const ex = new RVector(1, 0);
+                let angA = Math.atan2(vA.y, vA.x);
+                if (angA < 0) {
+                    angA += 2*Math.PI;
+                }
 
-                const angA = getAngle(ex, vA),
-                    angB = getAngle(ex, vB);
+                let angB = Math.atan2(vB.y, vB.x);
+                if (angB < 0) {
+                    angB += 2*Math.PI;
+                }
 
                 _sh.setCenter(c);
                 _sh.setRadius(r);

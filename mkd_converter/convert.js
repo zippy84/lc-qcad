@@ -663,20 +663,95 @@ all3.forEach(id => {
 
 });
 
-const all4 = doc.queryAllEntities(false, true, [RS.EntityLine, RS.EntityArc]);
+qDebug('->', deletedShapes);
 
-all4.forEach(id => {
-    const ent = doc.queryEntityDirect(id);
+// wandelt in lines und arcs um
 
-    if (ent.getLength() < 1e-5) {
-        const op = new RDeleteObjectOperation(ent);
-        di.applyOperation(op);
+const op = new RMixedOperation();
 
-        deletedShapes++;
+const all4 = doc.queryAllEntities(false, true, [RS.EntityPolyline]);
+
+all4.forEach(entId => {
+    const ent = doc.queryEntity(entId);
+
+    if (ent.countSegments() === 1) {
+        const first = ent.getSegmentAt(0);
+
+        if (isLineShape(first) || isArcShape(first)) {
+            const newEnt = shapeToEntity(doc, first.clone());
+
+            newEnt.setBlockId(ent.getBlockId());
+            newEnt.copyAttributesFrom(ent.data(), false);
+
+            op.addObject(newEnt, false);
+            op.deleteObject(ent);
+        }
     }
 });
 
-qDebug('->', deletedShapes);
+di.applyOperation(op);
+
+// duplikate löschen
+
+const all5 = doc.queryAllEntities(false, true, [RS.EntityErc, RS.EntityLine]);
+
+const pts = [];
+
+all5.forEach(entId => {
+    const ent = doc.queryEntityDirect(entId),
+        layId = ent.getLayerId(),
+        blockId = ent.getBlockId();
+
+    const ptA = ent.getStartPoint(),
+        ptB = ent.getEndPoint();
+
+    pts.push({blockId, layId, entId, startPt: ptA, endPt: ptB});
+    pts.push({blockId, layId, entId, startPt: ptB, endPt: ptA});
+});
+
+const tree = new KDBush(pts, p => p.startPt.x, p => p.startPt.y);
+
+const dupls = {};
+
+for (const p of pts) {
+    if (typeof dupls[p.entId] === 'undefined') {
+        const {x, y} = p.startPt;
+
+        const nearest = tree.within(x, y, 1e-5);
+
+        for (const id of nearest) {
+            const near = pts[id];
+
+            if (near.blockId === p.blockId
+                && near.layId === p.layId
+                && near.entId !== p.entId
+                && typeof dupls[near.entId] === 'undefined'
+                && near.endPt.equalsFuzzy2D(p.endPt, 1e-5)) {
+
+                const shA = doc.queryEntity(near.entId).castToShape(),
+                    shB = doc.queryEntity(p.entId).castToShape();
+
+                if (isArcShape(shA) && isArcShape(shB)) {
+                    if (shA.equals(shB, 1e-5)) {
+                        dupls[near.entId] = null;
+                    }
+                } else {
+                    dupls[near.entId] = null;
+                }
+            }
+        }
+    }
+}
+
+qDebug('->', Object.keys(dupls));
+
+const op2 = new RDeleteObjectsOperation();
+
+for (const dupl of Object.keys(dupls)) {
+    op2.deleteObject(doc.queryEntity(parseInt(dupl)));
+}
+
+di.applyOperation(op2);
 
 // löscht die alten bemaßungen
 
@@ -692,7 +767,7 @@ if (redLines.length === 0) {
 
 // layer löschen
 
-const op = new RDeleteObjectsOperation();
+const op3 = new RDeleteObjectsOperation();
 
 lays.forEach(id => {
     const lay = doc.queryLayer(id),
@@ -700,12 +775,12 @@ lays.forEach(id => {
 
     if (doc.queryLayerEntities(id, true).length === 0) {
         if (id !== doc.getLayer0Id()) {
-            op.deleteObject(lay);
+            op3.deleteObject(lay);
         }
     } else if (layName === 'Bemaßungen') {
-        // op.deleteObject(lay);
+        // op3.deleteObject(lay);
     } else if (layName === 'Markierungen') {
-        op.deleteObject(lay);
+        op3.deleteObject(lay);
     } else if (typeof styles[layName] === 'undefined') {
         if (id !== doc.getLayer0Id()) {
             qDebug('->', layName);
@@ -713,7 +788,7 @@ lays.forEach(id => {
     }
 });
 
-di.applyOperation(op);
+di.applyOperation(op3);
 
 di.exportFile(fileOut, 'DXF 2013');
 di.destroy();
