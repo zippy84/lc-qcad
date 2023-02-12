@@ -77,6 +77,8 @@ const styles =  {
     'Schindeln_3': {},
 };
 
+doc.setCurrentLayer(doc.getLayer0Id());
+
 // modfiziert die layer
 
 const lays = doc.queryAllLayers();
@@ -708,13 +710,16 @@ const pts = [];
 all5.forEach(entId => {
     const ent = doc.queryEntityDirect(entId),
         layId = ent.getLayerId(),
+        layName = ent.getLayerName(),
         blockId = ent.getBlockId();
 
     const ptA = ent.getStartPoint(),
         ptB = ent.getEndPoint();
 
-    pts.push({blockId, layId, entId, startPt: ptA, endPt: ptB});
-    pts.push({blockId, layId, entId, startPt: ptB, endPt: ptA});
+    if (layName !== 'Bemaßungen') {
+        pts.push({blockId, layId, entId, startPt: ptA, endPt: ptB});
+        pts.push({blockId, layId, entId, startPt: ptB, endPt: ptA});
+    }
 });
 
 const tree = new KDBush(pts, p => p.startPt.x, p => p.startPt.y);
@@ -761,7 +766,80 @@ for (const dupl of Object.keys(dupls)) {
 
 di.applyOperation(op2);
 
-qDebug('-> deletedDuplicates', Object.keys(dupls).length);
+let deletedDuplicates = Object.keys(dupls).length;
+
+// löscht übereinanderliegende lines
+
+const op3 = new RDeleteObjectsOperation();
+
+doc.queryAllEntities(false, true, [RS.EntityLine]).forEach(id => {
+    const ent = doc.queryEntityDirect(id),
+        sh = ent.castToShape(),
+        layId = ent.getLayerId(),
+        layName = ent.getLayerName(),
+        blockId = ent.getBlockId();
+
+    const pA = ent.getStartPoint(),
+        pB = ent.getEndPoint();
+
+    if (layName !== 'Bemaßungen') {
+        const v = pB.operator_subtract(pA).normalize(),
+            _v = new RVector(-v.y, v.x),
+            d = _v.dot(pA);
+
+        const box = sh.getBoundingBox().growXY(1e-5);
+
+        doc.queryIntersectedEntitiesXY(box)
+            .filter(_id => _id !== id)
+            .map(_id => doc.queryEntityDirect(_id))
+            .filter(_ent => _ent.getLayerName() !== 'Bemaßungen' && layId === _ent.getLayerId() && blockId === _ent.getBlockId())
+            .forEach(_ent => {
+                const lines = [];
+
+                if (isLineEntity(_ent)) {
+                    lines.push(_ent.castToShape());
+                } else if (isPolylineEntity(_ent)) {
+                    _ent.getExploded().forEach(shape => {
+                        if (isLineShape(shape)) {
+                            lines.push(shape);
+                        }
+                    });
+                }
+
+                for (const line of lines) {
+                    const _pA = line.getStartPoint(),
+                        _pB = line.getEndPoint();
+
+                    const w = _pB.operator_subtract(_pA).normalize(),
+                        _w = new RVector(-w.y, w.x),
+                        e = _w.dot(_pA);
+
+                    const det = _v.x*_w.y-_w.x*_v.y;
+
+                    // normalen können entgegengesetzt gerichtet sein
+
+                    if (Math.abs(det) < 1e-8 && Math.abs(Math.abs(d)-Math.abs(e)) < 1e-5) {
+                        const _box = line.getBoundingBox().growXY(1e-5);
+
+                        // partielle überschneidung wird nicht behandelt
+
+                        if (_box.containsPoint(pA) && _box.containsPoint(pB)) {
+                            op3.deleteObject(ent);
+
+                            deletedDuplicates++;
+
+                            break;
+                        }
+                    }
+                }
+
+        });
+    }
+});
+
+di.applyOperation(op3);
+
+qDebug('-> deletedDuplicates', deletedDuplicates);
 
 // löscht die alten bemaßungen
 
@@ -777,7 +855,7 @@ if (redLines.length === 0) {
 
 // layer löschen
 
-const op3 = new RDeleteObjectsOperation();
+const op4 = new RDeleteObjectsOperation();
 
 lays.forEach(id => {
     const lay = doc.queryLayer(id),
@@ -785,12 +863,12 @@ lays.forEach(id => {
 
     if (doc.queryLayerEntities(id, true).length === 0) {
         if (id !== doc.getLayer0Id()) {
-            op3.deleteObject(lay);
+            op4.deleteObject(lay);
         }
     } else if (layName === 'Bemaßungen') {
-        // op3.deleteObject(lay);
+        // op4.deleteObject(lay);
     } else if (layName === 'Markierungen') {
-        op3.deleteObject(lay);
+        op4.deleteObject(lay);
     } else if (typeof styles[layName] === 'undefined') {
         if (id !== doc.getLayer0Id()) {
             qDebug('->', layName);
@@ -798,7 +876,7 @@ lays.forEach(id => {
     }
 });
 
-di.applyOperation(op3);
+di.applyOperation(op4);
 
 di.exportFile(fileOut, 'DXF 2013');
 di.destroy();
