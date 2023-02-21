@@ -70,56 +70,68 @@ AddGaps.prototype.finishEvent = function () {
 
         var grp = groups[entId];
 
-        var numSegs = sh.countSegments();
+        if (isPolylineEntity(ent)) {
+            var numSegs = sh.countSegments();
 
-        var newLines = [[]];
+            var newPls = [[]];
 
-        for (var i = 0; i < numSegs; i++) {
-            var lastLine = newLines[newLines.length-1];
+            for (var i = 0; i < numSegs; i++) {
+                var lastPl = newPls[newPls.length-1];
 
-            if (grp[i] !== undefined) {
-                if (grp[i].length) {
-                    lastLine.push(grp[i][0]);
+                if (grp[i] !== undefined) {
+                    if (grp[i].length) {
+                        lastPl.push(grp[i][0]);
 
-                    for (var j = 1; j < grp[i].length; j++) {
-                        newLines.push([grp[i][j]]);
+                        for (var j = 1; j < grp[i].length; j++) {
+                            newPls.push([grp[i][j]]);
+                        }
+
+                    } else {
+                        newPls.push([]);
                     }
 
                 } else {
-                    newLines.push([]);
-                }
-
-            } else {
-                lastLine.push(sh.getSegmentAt(i).clone());
-            }
-        }
-
-        if (sh.isClosed()) {
-            var lastLine = newLines[newLines.length-1];
-
-            if (newLines[0].length && lastLine.length) {
-                var pA = newLines[0][0].getStartPoint(),
-                    pB = lastLine[lastLine.length-1].getEndPoint();
-
-                if (pA.equalsFuzzy2D(pB)) {
-                    lastLine.push.apply(lastLine, newLines[0]);
-
-                    newLines[0].length = 0;
+                    lastPl.push(sh.getSegmentAt(i).clone());
                 }
             }
-        }
 
-        newLines.forEach(function (line) {
-            if (line.length) {
-                var newSh = new RPolyline(line);
-                var pl = shapeToEntity(this.doc, newSh);
+            if (sh.isClosed()) {
+                var lastPl = newPls[newPls.length-1];
 
-                pl.copyAttributesFrom(ent.data());
+                if (newPls[0].length && lastPl.length) {
+                    var pA = newPls[0][0].getStartPoint(),
+                        pB = lastPl[lastPl.length-1].getEndPoint();
 
-                op.addObject(pl, false);
+                    if (pA.equalsFuzzy2D(pB)) {
+                        lastPl.push.apply(lastPl, newPls[0]);
+
+                        newPls[0].length = 0;
+                    }
+                }
             }
 
-        }, this);
+            newPls.forEach(function (newPl) {
+                if (newPl.length) {
+                    var newSh = new RPolyline(newPl);
+                    var newEnt = shapeToEntity(this.doc, newSh);
+
+                    newEnt.copyAttributesFrom(ent.data());
+
+                    op.addObject(newEnt, false);
+                }
+
+            }, this);
+
+        } else {
+            grp[0].forEach(function (newSh) {
+                var newEnt = shapeToEntity(this.doc, newSh);
+                newEnt.copyAttributesFrom(ent.data());
+
+                op.addObject(newEnt, false);
+
+            }, this);
+
+        }
 
         op.deleteObject(ent);
 
@@ -210,6 +222,8 @@ AddGaps.prototype.mouseMoveEvent = function (event) {
 
         if (isPolylineEntity(ent)) {
             key = entId + ',' + ent.getClosestSegment(p);
+        } else if (isLineEntity(ent) || isArcEntity(ent) || isCircleEntity(ent)) {
+            key = entId + ',0';
         }
     }
 
@@ -238,9 +252,13 @@ AddGaps.prototype.mouseMoveEvent = function (event) {
         } else {
             qDebug('adding');
 
-            var i = parseInt(key.split(',')[1]);
+            if (isPolylineEntity(ent)) {
+                var i = parseInt(key.split(',')[1]);
+                var seg = ent.getSegmentAt(i);
 
-            var seg = ent.getSegmentAt(i);
+            } else {
+                var seg = ent.castToShape();
+            }
 
             var l = seg.getLength();
 
@@ -433,7 +451,59 @@ AddGaps.prototype.mouseMoveEvent = function (event) {
                         entities: entities.map(function (ent) { return ent.getId(); }),
                         shapes: arcs};
 
+                } else if (isCircleShape(seg)) {
+                    var shape = seg.clone();
+
+                    var radius = shape.getRadius(),
+                        center = shape.getCenter();
+
+                    var gap_ = this.gap/radius;
+
+                    var mids = [];
+
+                    var phi = 2*Math.PI/n;
+
+                    for (var i = 0; i < n; i++) {
+                        mids.push(shape.getPointAtAngle(i*phi));
+                    }
+
+                    var arcs = [];
+
+                    for (var i = 0; i < n; i++) {
+                        var arc = new RArc(center, radius, i*phi+gap_/2, (i+1)*phi-gap_/2);
+                        arcs.push(arc);
+                    }
+
+                    var entities = [];
+
+                    var op = new RAddObjectsOperation(false);
+
+                    mids.forEach(function (_a) {
+                        var vec = _a.operator_subtract(center).normalize();
+
+                        var _b = _a.operator_add(vec.operator_multiply(this.gap/2))
+
+                        var line = new RLine(_a, _b);
+
+                        var lineEnt = shapeToEntity(this.doc, line);
+
+                        entities.push(lineEnt);
+
+                        lineEnt.copyAttributesFrom(ent.data());
+                        lineEnt.setLayerId(layId);
+
+                        lineEnt.setColor(new RColor('lime'));
+
+                        op.addObject(lineEnt, false);
+                    }, this);
+
+                    this.di.applyOperation(op);
+
+                    this.hovered = {key: key,
+                        entities: entities.map(function (ent) { return ent.getId(); }),
+                        shapes: arcs};
                 }
+
             }
         }
     }

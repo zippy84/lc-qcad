@@ -65,7 +65,7 @@ The second plugin can be used to add gaps to the cuttings. Call this plugin via 
 
 You have to select the cutting layer first. Hover to one of the lines and you will see a preview of the new gap positions. If the preview is okay, just click to lock it. You can unlock a preview with a second click. Add gaps to other segments and finally terminate the plugin with a right click in the document.
 
-Currently the plugin can only work on polylines.
+Currently the plugin can only work with lines, arcs, circles and polylines.
 
 The plugin has two settings:
 
