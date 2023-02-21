@@ -575,6 +575,21 @@ di.applyOperation(op9);
 // const _ids = doc.queryIntersectedEntitiesXY(new RBox(466, 452, 490, 464));
 // qDebug(_ids);
 
+// löscht zu kurze
+
+const op10 = new RDeleteObjectsOperation();
+op10.setTransactionGroup(group);
+
+doc.queryAllEntities(false, true, [RS.EntityPolyline, RS.EntityLine, RS.EntityArc]).forEach(id => {
+    const ent = doc.queryEntity(id);
+
+    if (ent.getLength() < .01) {
+        op10.deleteObject(ent);
+    }
+});
+
+di.applyOperation(op10);
+
 // gruppieren
 
 const rects = [];
@@ -692,8 +707,8 @@ const outerEnts = []; // wird nicht benötigt
 
 const refs2 = doc.queryAllBlockReferences();
 
-const op10 = new RAddObjectsOperation();
-op10.setTransactionGroup(group);
+const op11 = new RAddObjectsOperation();
+op11.setTransactionGroup(group);
 
 for (const refId of refs2) {
     const ref = doc.queryEntity(refId);
@@ -771,7 +786,7 @@ for (const refId of refs2) {
                             outerEnts.push(off);
                         }
 
-                        op10.addObject(off, false);
+                        op11.addObject(off, false);
                     }
 
                     break;
@@ -790,7 +805,7 @@ for (const refId of refs2) {
                     outerEnts.push(off);
                 }
 
-                op10.addObject(off, false);
+                op11.addObject(off, false);
 
                 break;
 
@@ -801,7 +816,7 @@ for (const refId of refs2) {
     }
 }
 
-di.applyOperation(op10);
+di.applyOperation(op11);
 
 // outerEnts.forEach(ent => {
 //     qDebug(ent.getId());
@@ -809,24 +824,24 @@ di.applyOperation(op10);
 
 // verschiebt auf die 0
 
-const op11 = new RModifyObjectsOperation();
-op11.setTransactionGroup(group);
+const op12 = new RModifyObjectsOperation();
+op12.setTransactionGroup(group);
 
 doc.queryLayerEntities(newLay.getId()).forEach(id => {
     const ent = doc.queryEntityDirect(id);
 
     ent.setLayerId(doc.getLayer0Id());
-    op11.addObject(ent, false);
+    op12.addObject(ent, false);
 });
 
-di.applyOperation(op11);
+di.applyOperation(op12);
 
 // löst die blöcke auf
 
 const refs3 = doc.queryAllBlockReferences();
 
-const op12 = new RModifyObjectsOperation();
-op12.setTransactionGroup(group);
+const op13 = new RModifyObjectsOperation();
+op13.setTransactionGroup(group);
 
 for (const _ref of refs3) {
     const ref = doc.queryEntity(_ref),
@@ -842,41 +857,41 @@ for (const _ref of refs3) {
         itm.rotate(rot);
         itm.move(pos);
 
-        op12.addObject(itm, false);
+        op13.addObject(itm, false);
     }
 
     // löscht den block
-    op12.deleteObject(doc.queryBlock(ref.getReferencedBlockId()));
+    op13.deleteObject(doc.queryBlock(ref.getReferencedBlockId()));
 
 }
 
-di.applyOperation(op12);
+di.applyOperation(op13);
 
 // verschiebt auf die 0
 
-const op13 = new RModifyObjectsOperation();
-op13.setTransactionGroup(group);
+const op14 = new RModifyObjectsOperation();
+op14.setTransactionGroup(group);
 
 doc.queryLayerEntities(offLay.getId()).forEach(id => {
     const ent = doc.queryEntityDirect(id);
 
     ent.setLayerId(doc.getLayer0Id());
-    op13.addObject(ent, false);
+    op14.addObject(ent, false);
 });
 
-di.applyOperation(op13);
+di.applyOperation(op14);
 
 // löscht layer
 
 const _newLay = doc.queryLayer('New'),
     _offLay = doc.queryLayer('Offset');
 
-const op14 = new RDeleteObjectsOperation();
-op14.setTransactionGroup(group);
+const op15 = new RDeleteObjectsOperation();
+op15.setTransactionGroup(group);
 
-op14.deleteObject(_newLay);
-op14.deleteObject(_offLay);
-di.applyOperation(op14);
+op15.deleteObject(_newLay);
+op15.deleteObject(_offLay);
+di.applyOperation(op15);
 
 if (_window === null) {
     di.exportFile(filePath.replace(/([^\/]+)\.dxf$/, 'edited_$1.dxf'), 'DXF 2013');
