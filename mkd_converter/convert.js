@@ -64,6 +64,7 @@ const styles =  {
     'Schindeln_Hintergrund': { 'hatch-color': '#f2f2f2' },
     'Dach_Druck': { 'hatch-color': '#007fff' },
     'Schild': { 'hatch-color': '#000000' },
+    'Muster': { 'line-color': '#e0e0e0' },
 
     // der vollständigkeit halber
     'Gravur': {},
