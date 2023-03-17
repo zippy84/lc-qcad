@@ -17,19 +17,12 @@ include('scripts/library.js');
 const doc = new RDocument(new RMemoryStorage(), new RSpatialIndexNavel());
 const di = new RDocumentInterface(doc);
 
-const fileIn = args[args.length-1];
+const fileIn = args[1],
+    fileOut = args[2];
+
+qDebug('->', fileOut);
 
 di.importFile(fileIn);
-
-const info = new QFileInfo(fileIn);
-const dir = info.absoluteDir();
-dir.cd('out');
-
-const fileName = info.baseName();
-
-qDebug('->', fileName);
-
-const fileOut = new QFileInfo(dir, fileName + '_.dxf').filePath();
 
 const styles =  {
     '0.35_Schwarz': { 'hatch-color': '#606060' },

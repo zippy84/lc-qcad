@@ -5,14 +5,19 @@ pushd ..
 npm run build
 popd
 
-mkdir -p mkd/out
-mkdir -p mkd2/out
-mkdir -p mkd3/out
-mkdir -p mkd4/out
+mkdir -p mkd
+mkdir -p mkd2
+mkdir -p mkd3
 
-find mkd -maxdepth 1 -name "*.dxf" -exec qcad -allow-multiple-instances -autostart dist/convert.js $(realpath {}) \;
-find mkd2 -maxdepth 1 -name "*.dxf" -exec qcad -allow-multiple-instances -autostart dist/convert.js $(realpath {}) \;
-find mkd3 -maxdepth 1 -name "*.dxf" -exec qcad -allow-multiple-instances -autostart dist/convert.js $(realpath {}) \;
-find mkd4 -maxdepth 1 -name "*.dxf" -exec qcad -allow-multiple-instances -autostart dist/convert.js $(realpath {}) \;
+convert() {
+    dir=$(realpath $1)
+    name=$(basename $2 .dxf)
+    out="${dir}/${name}_.dxf"
+    qcad -allow-multiple-instances -autostart dist/convert.js $2 $out
+}
 
-# ./run.sh 2>&1 | grep '\->'
+export -f convert
+
+find ~/transfer/export -name "*.dxf" -exec bash -c 'convert mkd {}' \;
+find ~/transfer/export2 -name "*.dxf" -exec bash -c 'convert mkd2 {}' \;
+find ~/transfer/export3 -name "*.dxf" -exec bash -c 'convert mkd3 {}' \;
