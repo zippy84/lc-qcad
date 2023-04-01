@@ -610,7 +610,12 @@ rects.forEach(rect => {
 
     const ids = doc.queryContainedEntitiesXY(bb);
 
-    const rectSh = rect.castToShape();
+    let rectSh = rect.castToShape();
+
+    // workaround
+    if (rectSh.hasArcSegments()) {
+        rectSh = rectSh.convertArcToLineSegmentsLength(.5);
+    }
 
     ids.forEach(id => {
         if (id !== rectId) {
