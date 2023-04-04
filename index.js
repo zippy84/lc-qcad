@@ -325,13 +325,15 @@ for (const entId of entities) {
     const ent = doc.queryEntity(entId);
 
     if (isArcEntity(ent) || isLineEntity(ent)) {
-        const ptA = ent.getStartPoint(),
-            ptB = ent.getEndPoint();
+        if (ent.getLength() > 1e-5) {
+            const ptA = ent.getStartPoint(),
+                ptB = ent.getEndPoint();
 
-        const layId = ent.getLayerId();
+            const layId = ent.getLayerId();
 
-        pts.push({layId, entId, startPt: ptA, endPt: ptB, end: 0});
-        pts.push({layId, entId, startPt: ptB, endPt: ptA, end: 1});
+            pts.push({layId, entId, startPt: ptA, endPt: ptB, end: 0});
+            pts.push({layId, entId, startPt: ptB, endPt: ptA, end: 1});
+        }
     }
 }
 
@@ -572,9 +574,6 @@ for (const id of Object.keys(visited)) {
 
 di.applyOperation(op9);
 
-// const _ids = doc.queryIntersectedEntitiesXY(new RBox(466, 452, 490, 464));
-// qDebug(_ids);
-
 // löscht zu kurze
 
 const op10 = new RDeleteObjectsOperation();
@@ -589,6 +588,162 @@ doc.queryAllEntities(false, true, [RS.EntityPolyline, RS.EntityLine, RS.EntityAr
 });
 
 di.applyOperation(op10);
+
+// löscht interner punkte
+
+var op11 = new RMixedOperation();
+
+doc.queryAllEntities(false, true, [RS.EntityPolyline]).forEach(id => {
+    // qDebug('id', id);
+
+    const ent = doc.queryEntity(id);
+
+    const expl = ent.getExploded();
+
+    const grps = [[]];
+
+    expl.forEach(sh => {
+        const last = grps[grps.length-1];
+
+        if (last.length) {
+            if (last[0].getShapeType() === sh.getShapeType()) {
+                last.push(sh);
+            } else {
+                grps.push([sh]);
+            }
+        } else {
+            last.push(sh);
+        }
+    });
+
+    if (grps.length > 2) {
+        if (isLineShape(expl[0]) && ent.isClosed()) {
+            grps[0].unshift(...grps.pop());
+        }
+    }
+
+    for (const grp of grps) {
+        if (isLineShape(grp[0]) && grp.length > 1) {
+            let pts = grp.map(line => line.getStartPoint());
+
+            pts.push(grp[grp.length-1].getEndPoint());
+
+            // qDebug(pts);
+
+            if (grps.length === 1 && ent.isClosed()) {
+                const vecs = pts.slice(1).map((k, i) => k.operator_subtract(pts[i]).normalize());
+
+                vecs.unshift(vecs[vecs.length-1]);
+
+                const angs = vecs.slice(1).map((k, i) => Math.acos(k.dot(vecs[i])));
+
+                // qDebug(angs.join(', '));
+
+                const ind = angs.indexOf(Math.max(...angs));
+
+                // qDebug(ind);
+
+                pts.pop();
+
+                if (ind > 0) {
+                    pts = pts.slice(ind).concat(pts.slice(0, ind));
+                }
+
+                // qDebug(pts);
+
+                for (let i = pts.length-2; i > 0; i--) {
+                    const j = i+1;
+
+                    const v = pts[i].operator_subtract(pts[0]).normalize(),
+                        n = new RVector(-v.y, v.x),
+                        d = pts[0].dot(n);
+
+                    if (Math.abs(pts[j].dot(n)-d) < 1e-5) {
+                        pts.pop();
+                    } else {
+                        break;
+                    }
+                }
+
+                // qDebug(pts);
+            }
+
+            const badInds = [];
+
+            const pairs = [[0, pts.length-1]];
+
+            while (pairs.length) {
+                const [i, j] = pairs.shift();
+
+                const pA = pts[i],
+                    pB = pts[j];
+
+                const v = pB.operator_subtract(pA).normalize();
+
+                const n = new RVector(-v.y, v.x);
+
+                const d = pA.dot(n);
+
+                let maxDist = 0,
+                    maxIndex = 0;
+
+                for (let k = i+1; k < j; k++) {
+                    const dist = Math.abs(pts[k].dot(n)-d);
+
+                    if (dist > maxDist) {
+                        maxDist = dist;
+                        maxIndex = k;
+                    }
+                }
+
+                if (maxDist > 1e-5) {
+                    pairs.push([i, maxIndex]);
+                    pairs.push([maxIndex, j]);
+                } else {
+                    for (let k = i+1; k < j; k++) {
+                        badInds.push(k);
+                    }
+                }
+
+            }
+
+            badInds.sort((a, b) => b-a);
+
+            // qDebug(badInds);
+
+            const newPts = pts.slice();
+
+            for (const ind of badInds) {
+                newPts.splice(ind, 1);
+            }
+
+            if (grps.length === 1 && ent.isClosed()) {
+                newPts.push(newPts[0]);
+            }
+
+            // qDebug('->', newPts);
+
+            grp.length = 0;
+
+            for (let i = 0; i < newPts.length-1; i++) {
+                grp.push(new RLine(newPts[i], newPts[i+1]));
+            }
+
+        }
+    }
+
+    const newSh = new RPolyline(grps.flat()),
+        newEnt = shapeToEntity(doc, newSh);
+
+    newEnt.copyAttributesFrom(ent.data());
+
+    op11.addObject(newEnt, false);
+
+    op11.deleteObject(ent);
+
+});
+
+di.applyOperation(op11);
 
 // gruppieren
 
@@ -712,8 +867,8 @@ const outerEnts = []; // wird nicht benötigt
 
 const refs2 = doc.queryAllBlockReferences();
 
-const op11 = new RAddObjectsOperation();
-op11.setTransactionGroup(group);
+const op12 = new RAddObjectsOperation();
+op12.setTransactionGroup(group);
 
 for (const refId of refs2) {
     const ref = doc.queryEntity(refId);
@@ -791,7 +946,7 @@ for (const refId of refs2) {
                             outerEnts.push(off);
                         }
 
-                        op11.addObject(off, false);
+                        op12.addObject(off, false);
                     }
 
                     break;
@@ -810,7 +965,7 @@ for (const refId of refs2) {
                     outerEnts.push(off);
                 }
 
-                op11.addObject(off, false);
+                op12.addObject(off, false);
 
                 break;
 
@@ -821,7 +976,7 @@ for (const refId of refs2) {
     }
 }
 
-di.applyOperation(op11);
+di.applyOperation(op12);
 
 // outerEnts.forEach(ent => {
 //     qDebug(ent.getId());
@@ -829,24 +984,24 @@ di.applyOperation(op11);
 
 // verschiebt auf die 0
 
-const op12 = new RModifyObjectsOperation();
-op12.setTransactionGroup(group);
+const op13 = new RModifyObjectsOperation();
+op13.setTransactionGroup(group);
 
 doc.queryLayerEntities(newLay.getId()).forEach(id => {
     const ent = doc.queryEntityDirect(id);
 
     ent.setLayerId(doc.getLayer0Id());
-    op12.addObject(ent, false);
+    op13.addObject(ent, false);
 });
 
-di.applyOperation(op12);
+di.applyOperation(op13);
 
 // löst die blöcke auf
 
 const refs3 = doc.queryAllBlockReferences();
 
-const op13 = new RModifyObjectsOperation();
-op13.setTransactionGroup(group);
+const op14 = new RModifyObjectsOperation();
+op14.setTransactionGroup(group);
 
 for (const _ref of refs3) {
     const ref = doc.queryEntity(_ref),
@@ -862,41 +1017,41 @@ for (const _ref of refs3) {
         itm.rotate(rot);
         itm.move(pos);
 
-        op13.addObject(itm, false);
+        op14.addObject(itm, false);
     }
 
     // löscht den block
-    op13.deleteObject(doc.queryBlock(ref.getReferencedBlockId()));
+    op14.deleteObject(doc.queryBlock(ref.getReferencedBlockId()));
 
 }
 
-di.applyOperation(op13);
+di.applyOperation(op14);
 
 // verschiebt auf die 0
 
-const op14 = new RModifyObjectsOperation();
-op14.setTransactionGroup(group);
+const op15 = new RModifyObjectsOperation();
+op15.setTransactionGroup(group);
 
 doc.queryLayerEntities(offLay.getId()).forEach(id => {
     const ent = doc.queryEntityDirect(id);
 
     ent.setLayerId(doc.getLayer0Id());
-    op14.addObject(ent, false);
+    op15.addObject(ent, false);
 });
 
-di.applyOperation(op14);
+di.applyOperation(op15);
 
 // löscht layer
 
 const _newLay = doc.queryLayer('New'),
     _offLay = doc.queryLayer('Offset');
 
-const op15 = new RDeleteObjectsOperation();
-op15.setTransactionGroup(group);
+const op16 = new RDeleteObjectsOperation();
+op16.setTransactionGroup(group);
 
-op15.deleteObject(_newLay);
-op15.deleteObject(_offLay);
-di.applyOperation(op15);
+op16.deleteObject(_newLay);
+op16.deleteObject(_offLay);
+di.applyOperation(op16);
 
 if (_window === null) {
     di.exportFile(filePath.replace(/([^\/]+)\.dxf$/, 'edited_$1.dxf'), 'DXF 2013');
