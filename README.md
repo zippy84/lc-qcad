@@ -4,18 +4,6 @@ This repository contains two plugins for QCAD. They are designed to prepare draw
 
 Primarily they should be used for model making.
 
-## Features
-
-- automatically removes very small lines
-- detects and removes duplicates
-- allowed entities are lines, polylines, arcs and ellipses
-- polylines are not urgently needed
-- removes not wanted entities like hatches, dimensions, texts and all kind of constructive entities (points, infinite lines, rays)
-- all entities can be on different layers
-- the styles of the entities will be unified
-- contours and engravings don't need to be grouped in blocks
-- offsets all contours by a given value (the half of the cutting width)
-
 ## Dependencies
 
 Nothing but [QCAD](https://www.qcad.org/en/) >= 3.20.
@@ -42,7 +30,21 @@ There are a few things that you should consider before using the plugins.
 
 ## Prepare Plugin
 
-The main purpose of the first plugin is to prepare the drawing for laser cutting. The result is a drawing with only two layers: one for the cuttings and one for the engravings.
+The main purpose of the first plugin is to prepare the drawing for laser cutting. The result is a drawing with only two layers: one for the cuttings/contours and one for the engravings.
+
+Here are the features:
+
+- all entities will be moved to layer 0 (except engravings)
+- allowed entities are lines, polylines, arcs and ellipses
+- not wanted entities like hatches, dimensions, texts and all kind of constructive entities (points, infinite lines, rays) will be removed
+- contours and engravings of one part don't need to be grouped in a block
+- styles will be unified
+- blocks will be resolved
+- removes very small lines
+- removes duplicates
+- merges entities into polylines
+- polylines/polygons will be simplified
+- offsets contours by a given value
 
 Prepare your drawing as explained in the section before and open the plugin via `Misc > Modify > Prepare`.
 
@@ -51,7 +53,7 @@ Set the values in the dialog and confirm it.
 Adjustable settings are:
 
 - Layer Engraving
-    - existing layer with engravings
+    - name of the layer with engravings
     - all engravings must be on the area between inner and outer contours
     - small overlapping is allowed, as long as all points are on the area between the contours
 - Offset

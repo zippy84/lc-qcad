@@ -589,7 +589,7 @@ doc.queryAllEntities(false, true, [RS.EntityPolyline, RS.EntityLine, RS.EntityAr
 
 di.applyOperation(op10);
 
-// löscht interner punkte
+// löscht interne punkte
 
 var op11 = new RMixedOperation();
 
