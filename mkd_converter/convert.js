@@ -316,11 +316,9 @@ filtered.forEach(id => {
 
                     data.setExtensionPoint1(_cands[0].end);
                     data.setExtensionPoint2(_cands[1].end);
-                    data.setDefinitionPoint(pA);
 
-                    if (line.isVertical()) {
-                        data.setRotation(Math.PI/2);
-                    }
+                    data.setRotation(line.getAngle());
+                    data.setDefinitionPoint(pA);
 
                     const dim = new RDimRotatedEntity(doc, data);
 
