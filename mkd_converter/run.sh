@@ -23,4 +23,14 @@ export -f convert
 # find ~/transfer/export2 -name "*.dxf" -exec bash -c 'convert mkd2 {}' \;
 # find ~/transfer/export3 -name "*.dxf" -exec bash -c 'convert mkd3 {}' \;
 
-convert example example/Fassade.dxf
+# convert example example/Fassade.dxf
+
+# modify() {
+#     path=$(realpath $1)
+#     qcad -allow-multiple-instances -autostart modify_dims.js $path $2
+# }
+
+# modify mkd3/Revision_.dxf 10
+# modify mkd3/Revision2_.dxf 10
+# modify mkd3/Skizze_Treppe_.dxf 1
+# modify mkd3/Skizze_Treppe_Anfang_.dxf 1

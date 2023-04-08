@@ -350,8 +350,8 @@ for (const p of pts) {
         for (const id of nearest) {
             const near = pts[id];
 
-            if (near.layId == p.layId
-                && near.entId != p.entId
+            if (near.layId === p.layId
+                && near.entId !== p.entId
                 && typeof dupls[near.entId] === 'undefined'
                 && near.endPt.equalsFuzzy2D(p.endPt, 1e-5)) {
 
@@ -591,7 +591,7 @@ di.applyOperation(op10);
 
 // löscht interne punkte
 
-var op11 = new RMixedOperation();
+const op11 = new RMixedOperation();
 
 doc.queryAllEntities(false, true, [RS.EntityPolyline]).forEach(id => {
     // qDebug('id', id);
