@@ -592,6 +592,7 @@ di.applyOperation(op10);
 // löscht interne punkte
 
 const op11 = new RMixedOperation();
+op11.setTransactionGroup(group);
 
 doc.queryAllEntities(false, true, [RS.EntityPolyline]).forEach(id => {
     // qDebug('id', id);
@@ -617,7 +618,7 @@ doc.queryAllEntities(false, true, [RS.EntityPolyline]).forEach(id => {
     });
 
     if (grps.length > 2) {
-        if (isLineShape(expl[0]) && ent.isClosed()) {
+        if (isLineShape(expl[0]) && isLineShape(expl[expl.length-1]) && ent.isClosed()) {
             grps[0].unshift(...grps.pop());
         }
     }

@@ -23,7 +23,7 @@ export -f convert
 # find ~/transfer/export2 -name "*.dxf" -exec bash -c 'convert mkd2 {}' \;
 # find ~/transfer/export3 -name "*.dxf" -exec bash -c 'convert mkd3 {}' \;
 
-# convert example example/Fassade.dxf
+convert example example/Fassade.dxf
 
 # modify() {
 #     path=$(realpath $1)
